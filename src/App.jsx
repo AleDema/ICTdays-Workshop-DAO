@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from 'react';
-import Canvas from './components/Canvas';
 import './index.css';
 import motokoLogo from './assets/motoko_moving.png';
 import motokoShadowLogo from './assets/motoko_shadow.png';
@@ -119,31 +118,70 @@ function App() {
     const { ok: asset } = await storage.get(asset_id);
     //console.log(asset);
     setUploaded(asset.url)
+    return asset;
   }
 
   const mintNft = async () => {
-    if (nftCanister) {
-      //console.log(JSON.stringify(principal._arr))
-      let metadata = {
-        purpose: {
-          Rendered: null
-        },
-        key_val_data: [
-          {
-            key: "test",
-            val: {
-              TextContent: "ciao"
-            }
-          }
-        ],
-        data: []
-      }
-      let arr = []
-      arr.push(metadata)
-      let p = Principal.fromUint8Array(principal._arr)
-      console.log(arr)
-      nftCanister.mintDip721(p, arr)
+    if (!nftCanister) {
+      console.log("init error!")
+      return
     }
+
+    if (!file) {
+      console.log("No File selected")
+      return
+    }
+    //upload image
+    setLoading(true)
+    const onChainFile = await uploadImage()
+    //mint nft
+    let metadata = {
+      purpose: {
+        Rendered: null
+      },
+      key_val_data: [
+        {
+          key: "name",
+          val: {
+            TextContent: "Hello ICTdays"
+          }
+        },
+        {
+          key: "contentType",
+          val: {
+            TextContent: onChainFile.content_type
+          }
+        },
+        {
+          key: "locationType",
+          val: {
+            TextContent: "url"
+          }
+        },
+        {
+          key: "location",
+          val: {
+            TextContent: onChainFile.url
+          }
+        },
+
+      ],
+      data: []
+    }
+    // let arr = arr.push(metadata)
+    let p = Principal.fromUint8Array(principal._arr)
+    let receipt = await nftCanister.mintDip721(p, [metadata])
+    console.log(receipt)
+    //if minting fails, delete uploaded image
+    if (receipt.Err) {
+      const res = await storage.delete_asset(onChainFile.id)
+      console.log(res)
+    }
+
+    if (receipt.Ok) {
+      console.log("succesful mint")
+    }
+    setLoading(false)
   }
 
   const verifyConnection = async () => {
@@ -228,6 +266,7 @@ function App() {
         {error && <p>{error}</p>}
         {file && <p>Selected file: {file.name}</p>}
         {uploaded && <img src={uploaded}></img>}
+        {loading && <p>Minting NFT...</p>}
       </div>
     </div>
   );

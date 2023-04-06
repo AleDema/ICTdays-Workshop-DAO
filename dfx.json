@@ -10,13 +10,25 @@
             "type": "motoko",
             "main": "backend/Main.mo"
         },
+        "DIP721": {
+            "type": "motoko",
+            "main": "backend/DIP721/Main.mo"
+        },
+        "storage": {
+            "type": "motoko",
+            "main": "backend/Storage/FileStorage.mo"
+        },
         "frontend": {
-            "dependencies": ["backend"],
+            "dependencies": [
+                "backend"
+            ],
             "type": "assets",
             "frontend": {
                 "entrypoint": "dist/index.html"
             },
-            "source": ["dist/"]
+            "source": [
+                "dist/"
+            ]
         }
     }
 }

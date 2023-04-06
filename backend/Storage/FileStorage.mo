@@ -87,7 +87,7 @@ actor class FileStorage() = this {
 		//TODO: check chunks belong to caller
 
 		for (chunk in chunks.vals()) {
-			if (chunk.batch_id == batch_id) {
+			if (Principal.equal(chunk.owner, caller) and chunk.batch_id == batch_id) {
 				chunks_to_commit.add(chunk);
 			};
 		};

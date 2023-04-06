@@ -9,13 +9,14 @@ import Option "mo:base/Option";
 import Bool "mo:base/Bool";
 import Principal "mo:base/Principal";
 import Types "./Types";
+import Debug "mo:base/Debug";
 
 shared ({ caller }) actor class Dip721NFT() = Self {
   stable var transactionId : Types.TransactionId = 0;
   stable var nfts = List.nil<Types.Nft>();
   stable var custodian = caller;
   stable var custodians = List.make<Principal>(custodian);
-  ignore List.push(Principal.fromText("2mz3w-mvsyl-7jyy5-utujh-r3l4n-ww3dm-esjgl-igmix-of4f5-susxa-pqe"), custodians);
+  custodians := List.push(Principal.fromText("7b6um-y6qq6-3egoi-xxeae-6zukb-l6n3t-fd6jq-dabcl-yxymy-eue32-qqe"), custodians);
   stable var logo : Types.LogoResult = {
     logo_type = "boh";
     data = "boh";
@@ -152,6 +153,15 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     let items = List.filter(nfts, func(token : Types.Nft) : Bool { token.owner == user });
     let tokenIds = List.map(items, func(item : Types.Nft) : Types.TokenId { item.id });
     return List.toArray(tokenIds);
+  };
+
+  public shared ({ caller }) func isCustodian() : async Text {
+    Debug.print(debug_show (caller));
+    Debug.print(debug_show (custodians));
+    if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
+      return "not custodian";
+    };
+    return "custodian";
   };
 
   public shared ({ caller }) func mintDip721(to : Principal, metadata : Types.MetadataDesc) : async Types.MintReceipt {

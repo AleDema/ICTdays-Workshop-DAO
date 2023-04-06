@@ -6,6 +6,8 @@ import motokoShadowLogo from './assets/motoko_shadow.png';
 import reactLogo from './assets/react.svg';
 import { backend } from './declarations/backend';
 import { storage } from './declarations/storage';
+import { DIP721 } from './declarations/DIP721';
+import { idlFactory } from './declarations/DIP721';
 
 
 async function getUint8Array(file) {
@@ -25,12 +27,12 @@ async function getUint8Array(file) {
 }
 
 function App() {
-  const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState(null);
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState(null);
   const [uploaded, setUploaded] = useState(null);
+  const [nftCanister, setNftCanister] = useState(null);
 
   function handleFileUpload(event) {
     const selectedFile = event.target.files[0];
@@ -101,9 +103,6 @@ function App() {
 
 
     const asset_filename = file.name;
-    // const response = await fetch(file);
-    // const blob = await response.blob();
-    // const type = blob.type;
     const asset_content_type = file.type
     const { ok: asset_id } = await storage.commit_batch(
       batch_id,
@@ -124,6 +123,73 @@ function App() {
 
   }
 
+  const verifyConnection = async () => {
+    const connected = await window.ic.plug.isConnected();
+    // console.log(connected);
+    // console.log(process.env.DIP721_CANISTER_ID);
+    const nftCanisterId = process.env.DIP721_CANISTER_ID
+    if (!connected) {
+
+      // Whitelist
+      const whitelist = [
+        nftCanisterId,
+      ];
+
+      // Host
+      const host = "http://127.0.0.1:4943"//process.env.DFX_NETWORK;
+
+      // Callback to print sessionData
+      const onConnectionUpdate = async () => {
+        console.log(window.ic.plug.sessionManager.sessionData)
+        const nftActor = await window.ic.plug.createActor({
+          canisterId: nftCanisterId,
+          interfaceFactory: idlFactory,
+        });
+        setNftCanister(nftActor)
+      }
+      // Make the request
+      try {
+        const publicKey = await window.ic.plug.requestConnect({
+          whitelist,
+          host,
+          onConnectionUpdate,
+          timeout: 50000
+        });
+
+        console.log(`The connected user's public key is:`, publicKey);
+      } catch (e) {
+        console.log(e);
+      }
+    }
+    const nftActor = await window.ic.plug.createActor({
+      canisterId: nftCanisterId,
+      interfaceFactory: idlFactory,
+    });
+    setNftCanister(nftActor)
+  };
+
+  useEffect(() => {
+    async function plug() {
+      await verifyConnection();
+      // console.log(await nftCanister.symbolDip721())
+      // console.log(await nftCanister.nameDip721())
+      //console.log(await DIP721.isCustodian())
+      // console.log(nftCanister)
+      // console.log(await nftCanister.isCustodian())
+    }
+    plug();
+
+  }, []);
+
+  useEffect(() => {
+    const test = async () => {
+      if (nftCanister) {
+        console.log(nftCanister)
+        console.log(await nftCanister.isCustodian())
+      }
+    }
+    test()
+  }, [nftCanister]);
 
   return (
     <div className="">

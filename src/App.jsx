@@ -8,6 +8,7 @@ import { backend } from './declarations/backend';
 import { storage } from './declarations/storage';
 import { DIP721 } from './declarations/DIP721';
 import { idlFactory } from './declarations/DIP721';
+import { Principal } from '@dfinity/principal';
 
 
 async function getUint8Array(file) {
@@ -33,6 +34,7 @@ function App() {
   const [error, setError] = useState(null);
   const [uploaded, setUploaded] = useState(null);
   const [nftCanister, setNftCanister] = useState(null);
+  const [principal, setPrincipal] = useState(null);
 
   function handleFileUpload(event) {
     const selectedFile = event.target.files[0];
@@ -72,7 +74,7 @@ function App() {
   }
 
   const uploadImage = async () => {
-    console.log(file)
+    //console.log(file)
     let chunk_ids = [];
     let batch_id = Math.random().toString(36).substring(2, 7);
 
@@ -80,7 +82,7 @@ function App() {
       return storage.create_chunk(batch_id, chunk, order);
     };
     const asset_unit8Array = await getUint8Array(file)
-    console.log(asset_unit8Array)
+    //console.log(asset_unit8Array)
     const promises = [];
     const chunkSize = 2000000;
 
@@ -90,7 +92,7 @@ function App() {
       start += chunkSize, index++
     ) {
       const chunk = asset_unit8Array.slice(start, start + chunkSize);
-      console.log(chunk)
+      //console.log(chunk)
       promises.push(
         uploadChunk({
           chunk,
@@ -115,12 +117,33 @@ function App() {
     );
 
     const { ok: asset } = await storage.get(asset_id);
-    console.log(asset);
+    //console.log(asset);
     setUploaded(asset.url)
   }
 
   const mintNft = async () => {
-
+    if (nftCanister) {
+      //console.log(JSON.stringify(principal._arr))
+      let metadata = {
+        purpose: {
+          Rendered: null
+        },
+        key_val_data: [
+          {
+            key: "test",
+            val: {
+              TextContent: "ciao"
+            }
+          }
+        ],
+        data: []
+      }
+      let arr = []
+      arr.push(metadata)
+      let p = Principal.fromUint8Array(principal._arr)
+      console.log(arr)
+      nftCanister.mintDip721(p, arr)
+    }
   }
 
   const verifyConnection = async () => {
@@ -135,7 +158,7 @@ function App() {
         nftCanisterId,
       ];
 
-      // Host
+      // Host TODO switch for mainnet
       const host = "http://127.0.0.1:4943"//process.env.DFX_NETWORK;
 
       // Callback to print sessionData
@@ -145,6 +168,8 @@ function App() {
           canisterId: nftCanisterId,
           interfaceFactory: idlFactory,
         });
+        let principal = await window.ic.plug.getPrincipal()
+        setPrincipal(principal)
         setNftCanister(nftActor)
       }
       // Make the request
@@ -165,17 +190,14 @@ function App() {
       canisterId: nftCanisterId,
       interfaceFactory: idlFactory,
     });
+    let principal = await window.ic.plug.getPrincipal()
+    setPrincipal(principal)
     setNftCanister(nftActor)
   };
 
   useEffect(() => {
     async function plug() {
       await verifyConnection();
-      // console.log(await nftCanister.symbolDip721())
-      // console.log(await nftCanister.nameDip721())
-      //console.log(await DIP721.isCustodian())
-      // console.log(nftCanister)
-      // console.log(await nftCanister.isCustodian())
     }
     plug();
 
@@ -184,8 +206,8 @@ function App() {
   useEffect(() => {
     const test = async () => {
       if (nftCanister) {
-        console.log(nftCanister)
-        console.log(await nftCanister.isCustodian())
+        //console.log(nftCanister)
+        // console.log(await nftCanister.isCustodian())
       }
     }
     test()

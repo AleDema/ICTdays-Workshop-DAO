@@ -10,6 +10,7 @@ import Bool "mo:base/Bool";
 import Principal "mo:base/Principal";
 import Types "./Types";
 import Debug "mo:base/Debug";
+import Result "mo:base/Result";
 
 shared ({ caller }) actor class Dip721NFT() = Self {
   stable var transactionId : Types.TransactionId = 0;
@@ -18,12 +19,25 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   stable var custodians = List.make<Principal>(custodian);
   custodians := List.push(Principal.fromText("7b6um-y6qq6-3egoi-xxeae-6zukb-l6n3t-fd6jq-dabcl-yxymy-eue32-qqe"), custodians);
   stable var logo : Types.LogoResult = {
-    logo_type = "boh";
-    data = "boh";
+    logo_type = "img";
+    data = "";
   };
-  stable var name : Text = "Test";
-  stable var symbol : Text = "TST";
+  stable var name : Text = "NFT Name";
+  stable var symbol : Text = "ICT";
   stable var maxLimit : Nat16 = 100;
+  let IS_PROD : Bool = true;
+  let main_storage_principal = "tpyud-myaaa-aaaap-qa4gq-cai";
+  let local_storage_principal = "rkp4c-7iaaa-aaaaa-aaaca-cai";
+  var storage_principal = main_storage_principal;
+  if (IS_PROD) {
+    storage_principal := local_storage_principal;
+  };
+
+  public type StorageType = actor {
+    addCustodian : shared Principal -> async Result.Result<Text, Text>;
+  };
+
+  let storage_canister = actor (storage_principal) : StorageType;
 
   // https://forum.dfinity.org/t/is-there-any-address-0-equivalent-at-dfinity-motoko/5445/3
   let null_address : Principal = Principal.fromText("aaaaa-aa");
@@ -155,15 +169,6 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     return List.toArray(tokenIds);
   };
 
-  public shared ({ caller }) func isCustodian() : async Text {
-    Debug.print(debug_show (caller));
-    Debug.print(debug_show (custodians));
-    if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
-      return "not custodian";
-    };
-    return "custodian";
-  };
-
   public shared ({ caller }) func mintDip721(to : Principal, metadata : Types.MetadataDesc) : async Types.MintReceipt {
     if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
       return #Err(#Unauthorized);
@@ -179,10 +184,28 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     nfts := List.push(nft, nfts);
 
     transactionId += 1;
-
+    //notifyMaster()
     return #Ok({
       token_id = newId;
       id = transactionId;
     });
+  };
+
+  public shared ({ caller }) func isCustodian() : async Text {
+    Debug.print(debug_show (caller));
+    Debug.print(debug_show (custodians));
+    if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
+      return "not custodian";
+    };
+    return "custodian";
+  };
+
+  public shared ({ caller }) func addCustodian(new_custodian : Principal) : async Result.Result<Text, Text> {
+    if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
+      return #err("not custodian");
+    };
+    custodians := List.push(new_custodian, custodians);
+    ignore storage_canister.addCustodian(new_custodian);
+    return #ok("custodian");
   };
 };

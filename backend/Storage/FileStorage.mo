@@ -18,8 +18,10 @@ import Types "./types";
 
 import Utils "./utils";
 import Debug "mo:base/Debug";
+import List "mo:base/List";
 
-actor class FileStorage() = this {
+//TODO prevent anyone from using this canister
+shared ({ caller }) actor class FileStorage() = this {
 	type Asset = Types.Asset;
 	type Asset_ID = Types.Asset_ID;
 	type AssetChunk = Types.AssetChunk;
@@ -29,8 +31,9 @@ actor class FileStorage() = this {
 	let ACTOR_NAME : Text = "FileStorage";
 	let VERSION : Nat = 1;
 
-	// change me when in production
+	//TODO change me when in production
 	let IS_PROD : Bool = false;
+	let IS_PUBLIC : Bool = true; //used to determine if anyone can use the storage canister to add files
 
 	private var assets : HashMap.HashMap<Asset_ID, Asset> = HashMap.HashMap<Asset_ID, Asset>(
 		0,
@@ -45,6 +48,33 @@ actor class FileStorage() = this {
 		Nat.equal,
 		Hash.hash,
 	);
+	stable var custodian = caller;
+	stable var custodians = List.make<Principal>(custodian);
+	custodians := List.push(Principal.fromText("7b6um-y6qq6-3egoi-xxeae-6zukb-l6n3t-fd6jq-dabcl-yxymy-eue32-qqe"), custodians);
+
+	public shared ({ caller }) func isCustodian() : async Text {
+		if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
+			return "not custodian";
+		};
+		return "custodian";
+	};
+
+	func isAuthorized(user : Principal) : Bool {
+		if (IS_PUBLIC) return true;
+		if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == user })) {
+			return false;
+		};
+		return true;
+	};
+
+	public shared ({ caller }) func addCustodian(new_custodian : Principal) : async Result.Result<Text, Text> {
+		Debug.print(debug_show (caller));
+		if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
+			return #err("not custodian");
+		};
+		custodians := List.push(new_custodian, custodians);
+		return #ok("custodian");
+	};
 
 	private func compare(a : AssetChunk, b : AssetChunk) : Order.Order {
 		if (a.order < b.order) {
@@ -59,6 +89,7 @@ actor class FileStorage() = this {
 	};
 
 	public shared ({ caller }) func create_chunk(batch_id : Text, content : Blob, order : Nat) : async Nat {
+		//if (not isAuthorized(caller)) return 0;
 		chunk_id_count := chunk_id_count + 1;
 
 		let asset_chunk : AssetChunk = {
@@ -77,14 +108,14 @@ actor class FileStorage() = this {
 	};
 
 	public shared ({ caller }) func commit_batch(batch_id : Text, chunk_ids : [Chunk_ID], asset_properties : AssetProperties) : async Result.Result<Asset_ID, Text> {
+		if (not isAuthorized(caller)) return #err("Not authorized");
+
 		let ASSET_ID = Utils.generate_uuid();
 		let CANISTER_ID = Principal.toText(Principal.fromActor(this));
 
 		var chunks_to_commit = Buffer.Buffer<AssetChunk>(0);
 		var asset_content = Buffer.Buffer<Blob>(0);
 		var content_size = 0;
-
-		//TODO: check chunks belong to caller
 
 		for (chunk in chunks.vals()) {
 			if (Principal.equal(chunk.owner, caller) and chunk.batch_id == batch_id) {
@@ -144,6 +175,8 @@ actor class FileStorage() = this {
 	};
 
 	public shared ({ caller }) func delete_all_asset() : async Text {
+		if (not isAuthorized(caller)) return "Not authorized";
+
 		for (asset_id in assets.keys()) {
 			assets.delete(asset_id);
 		};
@@ -152,6 +185,7 @@ actor class FileStorage() = this {
 	};
 
 	public shared ({ caller }) func clear_chunks() : async () {
+		if (not isAuthorized(caller)) return;
 		chunks := HashMap.HashMap<Chunk_ID, AssetChunk>(
 			0,
 			Nat.equal,

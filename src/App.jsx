@@ -6,7 +6,8 @@ import reactLogo from './assets/react.svg';
 import { backend } from './declarations/backend';
 import { storage } from './declarations/storage';
 import { DIP721 } from './declarations/DIP721';
-import { idlFactory } from './declarations/DIP721';
+import { idlFactory as nftFactory } from './declarations/DIP721';
+import { idlFactory as storageFactory } from './declarations/storage';
 import { Principal } from '@dfinity/principal';
 
 
@@ -33,6 +34,7 @@ function App() {
   const [error, setError] = useState(null);
   const [uploaded, setUploaded] = useState(null);
   const [nftCanister, setNftCanister] = useState(null);
+  const [storageCanister, setStorageCanister] = useState(null);
   const [principal, setPrincipal] = useState(null);
 
   function handleFileUpload(event) {
@@ -73,11 +75,12 @@ function App() {
   }
 
   const uploadImage = async () => {
-    //console.log(file)
     let chunk_ids = [];
     let batch_id = Math.random().toString(36).substring(2, 7);
 
     const uploadChunk = async ({ chunk, order }) => {
+      console.log(storageCanister)
+      console.log(storage)
       return storage.create_chunk(batch_id, chunk, order);
     };
     const asset_unit8Array = await getUint8Array(file)
@@ -105,7 +108,7 @@ function App() {
 
     const asset_filename = file.name;
     const asset_content_type = file.type
-    const { ok: asset_id } = await storage.commit_batch(
+    const { ok: asset_id } = await storageCanister.commit_batch(
       batch_id,
       chunk_ids,
       {
@@ -114,9 +117,13 @@ function App() {
         content_type: asset_content_type,
       }
     );
-
+    if (!asset_id) {
+      console.log("Upload failed, not authorized")
+      return null
+    }
+    console.log(asset_id);
     const { ok: asset } = await storage.get(asset_id);
-    //console.log(asset);
+    console.log(asset);
     setUploaded(asset.url)
     return asset;
   }
@@ -134,6 +141,7 @@ function App() {
     //upload image
     setLoading(true)
     const onChainFile = await uploadImage()
+    if (!onChainFile) return;
     //mint nft
     let metadata = {
       purpose: {
@@ -174,7 +182,7 @@ function App() {
     console.log(receipt)
     //if minting fails, delete uploaded image
     if (receipt.Err) {
-      const res = await storage.delete_asset(onChainFile.id)
+      const res = await storageCanister.delete_asset(onChainFile.id)
       console.log(res)
     }
 
@@ -188,12 +196,12 @@ function App() {
     const connected = await window.ic.plug.isConnected();
     // console.log(connected);
     // console.log(process.env.DIP721_CANISTER_ID);
-    const nftCanisterId = process.env.DIP721_CANISTER_ID
     if (!connected) {
 
       // Whitelist
       const whitelist = [
-        nftCanisterId,
+        process.env.DIP721_CANISTER_ID,
+        process.env.STORAGE_CANISTER_ID
       ];
 
       // Host TODO switch for mainnet
@@ -202,13 +210,9 @@ function App() {
       // Callback to print sessionData
       const onConnectionUpdate = async () => {
         console.log(window.ic.plug.sessionManager.sessionData)
-        const nftActor = await window.ic.plug.createActor({
-          canisterId: nftCanisterId,
-          interfaceFactory: idlFactory,
-        });
         let principal = await window.ic.plug.getPrincipal()
-        setPrincipal(principal)
-        setNftCanister(nftActor)
+        setPrincipal(Principal.fromUint8Array(principal._arr))
+
       }
       // Make the request
       try {
@@ -224,25 +228,72 @@ function App() {
         console.log(e);
       }
     }
-    const nftActor = await window.ic.plug.createActor({
-      canisterId: nftCanisterId,
-      interfaceFactory: idlFactory,
-    });
     let principal = await window.ic.plug.getPrincipal()
     setPrincipal(principal)
-    setNftCanister(nftActor)
   };
 
-  useEffect(() => {
-    async function plug() {
-      await verifyConnection();
-    }
-    plug();
+  const initActors = async () => {
+    console.log("initActors")
+    console.log(principal)
 
-  }, []);
+    if (!principal) return;
+    const nftCanisterId = process.env.DIP721_CANISTER_ID
+    const nftActor = await window.ic.plug.createActor({
+      canisterId: nftCanisterId,
+      interfaceFactory: nftFactory,
+    });
+    setNftCanister(nftActor)
+
+    const storageCanisterId = process.env.STORAGE_CANISTER_ID
+    const storageActor = await window.ic.plug.createActor({
+      canisterId: storageCanisterId,
+      interfaceFactory: storageFactory,
+    });
+
+    setStorageCanister(storageActor)
+  }
+
+
+  const connect = () => {
+    verifyConnection()
+  }
+
+  const disconnect = async () => {
+    // await window.ic.plug.sessionManager.disconnect()
+
+    // setPrincipal(null)
+  }
+
+  const fetchData = async () => {
+
+    console.log(`principal ${principal}`)
+    if (!nftCanister || !principal) return
+    const ids = await nftCanister.getTokenIdsForUserDip721(principal)
+    console.log(ids);
+    for (id in ids) {
+      let value = await nftCanister.getMetadataDip721(id)
+      console.log(value)
+    }
+  }
+
+  useEffect(() => {
+    initActors()
+  }, [principal]);
+
+  useEffect(() => {
+    async function loadData() {
+      await fetchData();
+    }
+    //console.log(`nftCanister ${nftCanister}`)
+    loadData();
+  }, [nftCanister, principal]);
 
   return (
-    <div className="bg-gray-900 w-screen h-screen flex flex-col pt-40  ">
+    <div className="bg-gray-900 w-screen h-screen flex flex-col  ">
+      <div className="self-end p-8 ">
+        {principal && <button onClick={disconnect}>Connected</button>}
+        {!principal && <button onClick={connect}>Connect</button>}
+      </div>
       <div className="flex flex-row justify-center items-center">
         <a href="https://vitejs.dev" target="_blank">
           <img src="/vite.svg" className="logo vite " alt="Vite logo" />
@@ -264,23 +315,30 @@ function App() {
           </span>
         </a>
       </div>
-      <div className="flex flex-row justify-center items-center">
-        <button className=' m-4' onClick={uploadImage}>Test upload</button>
-        <button onClick={mintNft}>Mint NFT</button>
-      </div>
-      <div
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        className={dragging ? 'dragging' : ''}
-      >
-        <input type="file" onChange={handleFileUpload} />
-        {error && <p>{error}</p>}
-        {file && <p>Selected file: {file.name}</p>}
-        {uploaded && <img src={uploaded}></img>}
-        {loading && <p>Minting NFT...</p>}
-      </div>
+      {principal && <>
+        <div className="flex flex-row justify-center items-center">
+          {/* <button className=' m-4' onClick={uploadImage}>Test upload</button> */}
+          <button onClick={mintNft}>Mint NFT</button>
+        </div>
+        <div
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          className={dragging ? 'dragging' : ''}
+        >
+          <input type="file" onChange={handleFileUpload} />
+          {error && <p>{error}</p>}
+          {file && <p>Selected file: {file.name}</p>}
+          {uploaded && <img src={uploaded}></img>}
+          {loading && <p>Minting NFT...</p>}
+        </div>
+      </>
+      }
+
+      {!principal && <>
+        <p>Login to interact...</p>
+      </>}
     </div>
   );
 }

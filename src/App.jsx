@@ -9,6 +9,7 @@ import { DIP721 } from './declarations/DIP721';
 import { idlFactory as nftFactory } from './declarations/DIP721';
 import { idlFactory as storageFactory } from './declarations/storage';
 import { Principal } from '@dfinity/principal';
+import Card from './components/Card';
 
 
 async function getUint8Array(file) {
@@ -36,6 +37,7 @@ function App() {
   const [nftCanister, setNftCanister] = useState(null);
   const [storageCanister, setStorageCanister] = useState(null);
   const [principal, setPrincipal] = useState(null);
+  const [nfts, setNfts] = useState([]);
 
   function handleFileUpload(event) {
     const selectedFile = event.target.files[0];
@@ -79,8 +81,8 @@ function App() {
     let batch_id = Math.random().toString(36).substring(2, 7);
 
     const uploadChunk = async ({ chunk, order }) => {
-      console.log(storageCanister)
-      console.log(storage)
+      // console.log(storageCanister)
+      // console.log(storage)
       return storage.create_chunk(batch_id, chunk, order);
     };
     const asset_unit8Array = await getUint8Array(file)
@@ -259,9 +261,10 @@ function App() {
   }
 
   const disconnect = async () => {
-    // await window.ic.plug.sessionManager.disconnect()
+    window.ic.plug.sessionManager.disconnect()
 
-    // setPrincipal(null)
+    setPrincipal(null)
+    //clean all state
   }
 
   const fetchData = async () => {
@@ -269,11 +272,14 @@ function App() {
     console.log(`principal ${principal}`)
     if (!nftCanister || !principal) return
     const ids = await nftCanister.getTokenIdsForUserDip721(principal)
-    console.log(ids);
-    for (id in ids) {
-      let value = await nftCanister.getMetadataDip721(id)
-      console.log(value)
-    }
+    const nfts = []
+    ids.forEach(async function (item, index) {
+      console.log(item, index);
+      let value = await nftCanister.getMetadataDip721(item)
+      nfts.push(value.Ok)
+      setNfts(nfts)
+      console.log(`value ${value}`)
+    });
   }
 
   useEffect(() => {
@@ -291,7 +297,7 @@ function App() {
   return (
     <div className="bg-gray-900 w-screen h-screen flex flex-col  ">
       <div className="self-end p-8 ">
-        {principal && <button onClick={disconnect}>Connected</button>}
+        {principal && <button onClick={disconnect}>Disconnect</button>}
         {!principal && <button onClick={connect}>Connect</button>}
       </div>
       <div className="flex flex-row justify-center items-center">
@@ -330,8 +336,21 @@ function App() {
           <input type="file" onChange={handleFileUpload} />
           {error && <p>{error}</p>}
           {file && <p>Selected file: {file.name}</p>}
-          {uploaded && <img src={uploaded}></img>}
           {loading && <p>Minting NFT...</p>}
+          <div className="flex flex-row">
+            {nfts.map((e, i) => {
+              let name, url;
+              console.log(e)
+              e[0].key_val_data.forEach((item, index) => {
+                if (item.key == "name") name = item.val.TextContent;
+                if (item.key == "location") url = item.val.TextContent;
+
+              })
+              return (
+                <Card name={name} url={url}></Card>
+              )
+            })}
+          </div>
         </div>
       </>
       }

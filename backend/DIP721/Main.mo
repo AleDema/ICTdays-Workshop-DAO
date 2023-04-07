@@ -17,7 +17,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   stable var nfts = List.nil<Types.Nft>();
   stable var custodian = caller;
   stable var custodians = List.make<Principal>(custodian);
-  custodians := List.push(Principal.fromText("7b6um-y6qq6-3egoi-xxeae-6zukb-l6n3t-fd6jq-dabcl-yxymy-eue32-qqe"), custodians);
+  custodians := List.push(Principal.fromText("yn4hf-sjbin-irgim-hudxk-tjkcm-id5ea-3g2h6-p7f6z-nti57-sm5dx-sae"), custodians);
   stable var logo : Types.LogoResult = {
     logo_type = "img";
     data = "";
@@ -170,10 +170,10 @@ shared ({ caller }) actor class Dip721NFT() = Self {
   };
 
   public shared ({ caller }) func mintDip721(to : Principal, metadata : Types.MetadataDesc) : async Types.MintReceipt {
-    if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
-      return #Err(#Unauthorized);
-    };
-
+    // if (not List.some(custodians, func(custodian : Principal) : Bool { custodian == caller })) {
+    //   return #Err(#Unauthorized);
+    // };
+    Debug.print(debug_show (caller));
     let newId = Nat64.fromNat(List.size(nfts));
     let nft : Types.Nft = {
       owner = to;

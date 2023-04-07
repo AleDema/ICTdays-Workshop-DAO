@@ -118,7 +118,12 @@ shared ({ caller }) actor class FileStorage() = this {
 		var content_size = 0;
 
 		for (chunk in chunks.vals()) {
-			if (Principal.equal(chunk.owner, caller) and chunk.batch_id == batch_id) {
+			Debug.print(debug_show (Principal.equal(chunk.owner, caller)));
+			// if (not Principal.equal(chunk.owner, caller)) {
+			//   return #err("Unathorized chunk access");
+			// };
+
+			if (chunk.batch_id == batch_id) {
 				chunks_to_commit.add(chunk);
 			};
 		};

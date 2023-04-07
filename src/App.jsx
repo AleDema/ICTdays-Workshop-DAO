@@ -196,8 +196,6 @@ function App() {
 
   const verifyConnection = async () => {
     const connected = await window.ic.plug.isConnected();
-    // console.log(connected);
-    // console.log(process.env.DIP721_CANISTER_ID);
     if (!connected) {
 
       // Whitelist
@@ -206,8 +204,10 @@ function App() {
         process.env.STORAGE_CANISTER_ID
       ];
 
-      // Host TODO switch for mainnet
-      const host = "http://127.0.0.1:4943"//process.env.DFX_NETWORK;
+      let host = "http://127.0.0.1:4943"
+      if (process.env.DFX_NETWORK !== "ic") {
+        host = "https://mainnet.dfinity.network";
+      }
 
       // Callback to print sessionData
       const onConnectionUpdate = async () => {

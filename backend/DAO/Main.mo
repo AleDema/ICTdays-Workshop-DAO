@@ -15,20 +15,23 @@ import Text "mo:base/Text";
 import Blob "mo:base/Blob";
 import Map "mo:map/Map";
 import G "GovernanceTypes";
-import Prelude "mo:base/Prelude";
 import Bool "mo:base/Bool";
 
 shared ({ caller }) actor class DAO() = this {
 
-  //change on main
-  let IS_LOCAL_ENV = true;
-  var DEV_MODE = true;
-  let main_ledger_principal = "db3eq-6iaaa-aaaah-abz6a-cai";
-  let local_ledger_principal = "l7jw7-difaq-aaaaa-aaaaa-c";
-  var icrc_principal = main_ledger_principal;
-  if (IS_LOCAL_ENV) {
-    icrc_principal := local_ledger_principal;
+  //TODO change on main
+  let IS_PROD = true;
+  let local_notifier_principal = "renrk-eyaaa-aaaaa-aaada-cai";
+  var notifier_principal = "renrk-eyaaa-aaaaa-aaada-cai";
+  if (IS_PROD) {
+    notifier_principal := local_notifier_principal;
   };
+
+  public type NotifierType = actor {
+    check_nft_canister : (user : Principal, canister : Principal, callback : shared (Principal, Principal, Bool) -> ()) -> ();
+  };
+
+  let notifier_canister = actor (notifier_principal) : NotifierType;
 
   type ProposalId = G.ProposalId;
   type Proposal = G.Proposal;
@@ -36,20 +39,19 @@ shared ({ caller }) actor class DAO() = this {
   type ProposalState = G.ProposalState;
   type VotingOptions = G.VotingOptions;
   type Vote = G.Vote;
-
-  let { ihash; nhash; thash; phash; calcHash } = Map;
-
   type UserData = {
     isAdmin : Bool;
     canisterUsed : Principal;
   };
 
+  let { ihash; nhash; thash; phash; calcHash } = Map;
+
   private stable var proposal_id_counter = 0;
   private stable let proposals = Map.new<Nat, Proposal>(nhash);
-  stable var canister_owner = caller;
   private stable let users = Map.new<Principal, UserData>(phash);
   private stable let used_canisters = Map.new<Principal, Principal>(phash);
   private stable let user_votes = Map.new<Principal, Map.Map<ProposalId, Vote>>(phash);
+  stable var canister_owner = caller;
   //private stable var canister_owner = "7tbn6-kjdof-qz2ic-5pdwg-tszmq-5d7no-3pofa-ulqe4-qpztk-4rf7f-gae";
 
   /////////////
@@ -72,7 +74,7 @@ shared ({ caller }) actor class DAO() = this {
     return is_registered(caller);
   };
 
-  public func is_admin(user : Principal) : async Bool {
+  private func is_admin(user : Principal) : Bool {
     let res = Map.get(users, phash, user);
     switch (res) {
       case (?userData) {
@@ -86,6 +88,8 @@ shared ({ caller }) actor class DAO() = this {
   };
 
   public func ban_user(user : Principal) : async Result.Result<Text, Text> {
+    if (not is_admin(user)) return #err("Not authorized");
+
     let res = Map.get(users, phash, user);
     switch (res) {
       case (?value) {
@@ -108,23 +112,14 @@ shared ({ caller }) actor class DAO() = this {
   };
 
   public func notifier_callback(user : Principal, canister : Principal, result : Bool) : () {
-    Debug.print("HELLO");
+    Debug.print("notifier_callback");
+    Debug.print(debug_show (user));
+    Debug.print(debug_show (canister));
+    Debug.print(debug_show (result));
     if (result) {
       add_user(user, canister);
     };
   };
-
-  let local_notifier_principal = "renrk-eyaaa-aaaaa-aaada-cai";
-  var notifier_principal = "renrk-eyaaa-aaaaa-aaada-cai";
-  if (IS_LOCAL_ENV) {
-    notifier_principal := local_notifier_principal;
-  };
-
-  public type NotifierType = actor {
-    check_nft_canister : (user : Principal, canister : Principal, callback : shared (Principal, Principal, Bool) -> ()) -> ();
-  };
-
-  let notifier_canister = actor (notifier_principal) : NotifierType;
 
   public shared ({ caller }) func register(canister : Principal) : async () {
     //contact notifier
@@ -175,7 +170,7 @@ shared ({ caller }) actor class DAO() = this {
     let p : Proposal = do {
       switch (Map.get(proposals, nhash, id)) {
         case (?proposal) proposal;
-        case (_) return //does it return null or return the func? seems to work
+        case (_) return //
       };
     };
 
@@ -240,11 +235,11 @@ shared ({ caller }) actor class DAO() = this {
     Debug.print("end vote");
     ignore Map.put(proposals, nhash, p.id, updated_p);
     //Debug.print(debug_show (Map.get(proposals, nhash, id)));
-    if (state == #approved) await modify_parameters(p.change_data);
+    if (state == #approved) await execute_proposal(p.change_data);
 
   };
 
-  private func modify_parameters(change : ProposalType) : async () {
+  private func execute_proposal(change : ProposalType) : async () {
 
     // switch (change) {
     //   case (#change_text(new_text)) {

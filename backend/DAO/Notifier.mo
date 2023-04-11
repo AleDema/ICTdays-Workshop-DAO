@@ -3,10 +3,10 @@ import Text "mo:base/Text";
 import Principal "mo:base/Principal";
 import NftTypes "./NftTypes";
 
-//USED to contact other canisters safely
+//Used to retrieve data from other canisters safely
 actor {
 
-  type Callback = shared (Principal, Principal, Bool) -> (); //user, canister, result
+  type Callback = shared (Principal, Principal) -> (); //user, canister, result
 
   public type NftType = actor {
     nameDip721 : () -> async (Text);
@@ -16,6 +16,6 @@ actor {
     let nftCanister = actor (Principal.toText(canister)) : NftType;
     let test = await nftCanister.nameDip721();
     Debug.print(debug_show (test));
-    callback(user, canister, true);
+    callback(user, canister);
   };
 };

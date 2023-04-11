@@ -6,10 +6,6 @@
         }
     },
     "canisters": {
-        "backend": {
-            "type": "motoko",
-            "main": "backend/Main.mo"
-        },
         "DIP721": {
             "type": "motoko",
             "main": "backend/DIP721/Main.mo"
@@ -28,7 +24,7 @@
         },
         "frontend": {
             "dependencies": [
-                "backend"
+                "DAO"
             ],
             "type": "assets",
             "frontend": {

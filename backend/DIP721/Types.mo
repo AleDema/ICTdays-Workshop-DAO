@@ -5,6 +5,7 @@ import Nat32 "mo:base/Nat32";
 import Nat64 "mo:base/Nat64";
 import Blob "mo:base/Blob";
 import Principal "mo:base/Principal";
+import Result "mo:base/Result";
 
 module {
   public type Dip721NonFungibleToken = {
@@ -88,5 +89,9 @@ module {
   public type MintReceiptPart = {
     token_id : TokenId;
     id : Nat;
+  };
+
+  public type StorageType = actor {
+    addCustodian : shared Principal -> async Result.Result<Text, Text>;
   };
 };

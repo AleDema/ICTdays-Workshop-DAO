@@ -14,6 +14,7 @@ import Result "mo:base/Result";
 
 shared ({ caller }) actor class Dip721NFT() = Self {
   stable var transactionId : Types.TransactionId = 0;
+  var x = 0;
   stable var nfts = List.nil<Types.Nft>();
   stable var custodian = caller;
   stable var custodians = List.make<Principal>(custodian);
@@ -33,11 +34,7 @@ shared ({ caller }) actor class Dip721NFT() = Self {
     storage_principal := local_storage_principal;
   };
 
-  public type StorageType = actor {
-    addCustodian : shared Principal -> async Result.Result<Text, Text>;
-  };
-
-  let storage_canister = actor (storage_principal) : StorageType;
+  let storage_canister = actor (storage_principal) : Types.StorageType;
 
   // https://forum.dfinity.org/t/is-there-any-address-0-equivalent-at-dfinity-motoko/5445/3
   let null_address : Principal = Principal.fromText("aaaaa-aa");

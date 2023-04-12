@@ -14,7 +14,6 @@ import Result "mo:base/Result";
 
 shared ({ caller }) actor class Dip721NFT() = Self {
   stable var transactionId : Types.TransactionId = 0;
-  var x = 0;
   stable var nfts = List.nil<Types.Nft>();
   stable var custodian = caller;
   stable var custodians = List.make<Principal>(custodian);

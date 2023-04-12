@@ -71,9 +71,9 @@ function App() {
         process.env.STORAGE_CANISTER_ID
       ];
 
-      let host = "http://127.0.0.1:4943"
+      let host = "https://mainnet.dfinity.network"
       if (process.env.DFX_NETWORK !== "ic") {
-        host = "https://mainnet.dfinity.network";
+        host = "http://127.0.0.1:4943";
       }
 
       // Callback to print sessionData

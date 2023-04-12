@@ -108,7 +108,7 @@ function App() {
       if (daoCanister == null) return;
       if (isRegistered) {
         //update proposals
-        let proposals = await daoCanister.get_all_proposals();
+        let proposals = await daoCanister.get_all_proposals_with_vote();
         setProposals(proposals)
       }
       else {

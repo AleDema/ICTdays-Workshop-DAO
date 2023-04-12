@@ -13,6 +13,18 @@ module GovernanceTypes {
     change_data : ProposalType;
   };
 
+  public type MyProposal = {
+    id : ProposalId;
+    title : Text;
+    creator : Principal;
+    description : Text;
+    state : ProposalState;
+    approve_votes : Nat;
+    reject_votes : Nat;
+    change_data : ProposalType;
+    vote : ?Vote;
+  };
+
   // pType : ProposalType
 
   public type ProposalType = {

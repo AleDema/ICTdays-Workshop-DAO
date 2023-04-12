@@ -32,11 +32,22 @@ shared ({ caller }) actor class DAO() = this {
 
   type ProposalId = G.ProposalId;
   type Proposal = G.Proposal;
+  type MyProposal = G.MyProposal;
   type ProposalType = G.ProposalType;
   type ProposalState = G.ProposalState;
   type Vote = G.Vote;
 
   let { ihash; nhash; thash; phash; calcHash } = Map;
+
+  type DaoParameters = {
+    name : Text;
+    logo : Text;
+  };
+
+  stable var parameters : DaoParameters = {
+    name = "ICTDao";
+    logo = "";
+  };
 
   private stable var proposal_id_counter = 0;
   private stable let proposals = Map.new<ProposalId, Proposal>(nhash);
@@ -176,6 +187,48 @@ shared ({ caller }) actor class DAO() = this {
     let arr = Iter.toArray(iter);
     Debug.print(debug_show (arr));
     arr;
+  };
+
+  public query func get_current_vp() : async Nat {
+    return Map.size(users) / 2;
+  };
+
+  private func get_user_vote_on_proposal(user : Principal, proposal_id : ProposalId) : ?Vote {
+    let votes : ?Map.Map<ProposalId, Vote> = do ? {
+      let first = Map.get(user_votes, phash, caller);
+      first!;
+    };
+
+    let vote : ?Vote = do ? {
+      return Map.get(votes!, nhash, proposal_id);
+    };
+
+    return null;
+  };
+
+  public shared ({ caller }) func get_all_proposals_with_vote() : async [MyProposal] {
+    let b = Buffer.Buffer<MyProposal>(Map.size(proposals));
+    for (value in Map.vals<Nat, Proposal>(proposals)) {
+      Debug.print("caller");
+      Debug.print(debug_show (caller));
+      Debug.print(debug_show (value.id));
+      let vote : ?Vote = get_user_vote_on_proposal(caller, value.id);
+      switch (vote) {
+        case (null) {
+          Debug.print("null vote");
+          b.add({ value with vote = null });
+        };
+        case (?v) {
+          Debug.print(" vote");
+          b.add({ value with vote = ?v });
+        };
+      };
+    };
+    return Buffer.toArray(b);
+  };
+
+  public query func get_dao_parameters() : async DaoParameters {
+    parameters;
   };
 
   public shared ({ caller }) func vote(id : ProposalId, choice : Vote) : async () {

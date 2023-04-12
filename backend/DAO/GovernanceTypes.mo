@@ -28,7 +28,7 @@ module GovernanceTypes {
   // pType : ProposalType
 
   public type ProposalType = {
-    #change_text : Text; //just text
+    #change_name : Text; //just text
     #change_logo : Text; //url
     #poll : () //just a poll
   };

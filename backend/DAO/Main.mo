@@ -139,8 +139,8 @@ shared ({ caller }) actor class DAO() = this {
     notifier_canister.check_nft_canister(caller, canister, notifier_callback);
   };
 
-  public shared (msg) func submit_proposal(title : Text, description : Text, change : ProposalType) : async () {
-    if (isAnonymous(msg.caller) or not is_registered_internal(msg.caller)) return;
+  public shared (msg) func submit_proposal(title : Text, description : Text, change : ProposalType) : async Result.Result<Proposal, Text> {
+    if (isAnonymous(msg.caller) or not is_registered_internal(msg.caller)) return #err("Not authorized");
 
     let p : Proposal = {
       id = proposal_id_counter;
@@ -155,6 +155,7 @@ shared ({ caller }) actor class DAO() = this {
     ignore Map.put(proposals, nhash, p.id, p);
     Debug.print("CREATED PROPOSAL");
     proposal_id_counter := proposal_id_counter +1;
+    return #ok(p);
   };
 
   public shared ({ caller }) func delete_proposal(proposal_id : ProposalId) : async Result.Result<Text, Text> {
@@ -195,7 +196,7 @@ shared ({ caller }) actor class DAO() = this {
 
   private func get_user_vote_on_proposal(user : Principal, proposal_id : ProposalId) : ?Vote {
     let votes : ?Map.Map<ProposalId, Vote> = do ? {
-      let first = Map.get(user_votes, phash, caller);
+      let first = Map.get(user_votes, phash, user);
       first!;
     };
 
@@ -307,34 +308,15 @@ shared ({ caller }) actor class DAO() = this {
 
   private func execute_proposal(change : ProposalType) : async () {
     Debug.print("execute_proposal");
-    // switch (change) {
-    //   case (#change_text(new_text)) {
-    //     ignore webpage_canister.update_body(new_text);
-    //   };
-    //   case (#update_min_vp(new_vp)) {
-    //     var sanitized_vp = new_vp;
-    //     if (sanitized_vp < 0) {
-    //       sanitized_vp := 1;
-    //     };
-    //     MIN_VP_REQUIRED := sanitized_vp;
-    //   };
-    //   case (#update_threshold(new_th)) {
-    //     var sanitized_th = new_th;
-    //     if (sanitized_th < 0) {
-    //       sanitized_th := 1;
-    //     };
-    //     PROPOSAL_VP_THESHOLD := sanitized_th;
-    //   };
-    //   case (#toggle_quadratic) {
-    //     quadratic_voting();
-    //   };
-    //   case (#toggle_advanced_mode) {
-    //     if (current_vp_mode == #advanced) {
-    //       current_vp_mode := #basic;
-    //     } else if (current_vp_mode == #basic) {
-    //       current_vp_mode := #advanced;
-    //     };
-    //   };
+    switch (change) {
+      case (#change_name(new_name)) {
+        parameters := { parameters with name = new_name };
+      };
+      case (#change_logo(new_logo)) {
+        parameters := { parameters with logo = new_logo };
+      };
+      case (#poll) {};
+    };
   };
 
   private func isAnonymous(caller : Principal) : Bool {

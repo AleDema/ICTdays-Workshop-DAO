@@ -5,6 +5,7 @@ import motokoShadowLogo from './assets/motoko_shadow.png';
 import RootLayout from './layouts/RootLayout';
 import ErrorPage from './pages/ErrorPage';
 import { idlFactory as daoFactory } from './declarations/DAO';
+import { DAO } from './declarations/DAO';
 import { Principal } from '@dfinity/principal';
 
 import {
@@ -12,6 +13,14 @@ import {
   RouterProvider,
   Route
 } from "react-router-dom";
+import Proposal from './components/Proposal';
+
+
+const options = [
+  { value: "poll", label: "Make a poll" },
+  { value: "change_logo", label: "Update DAO Logo" },
+  { value: "change_name", label: "Update DAO Name" },
+];
 
 function App() {
   const [principal, setPrincipal] = useState(null);
@@ -21,13 +30,39 @@ function App() {
   const canisterInputField = useRef(null);
   const proposalDescription = useRef(null);
   const proposalBody = useRef(null);
+  const [proposalType, setProposalType] = useState("poll");
+  const [proposalChange, setProposalChange] = useState("");
+  const [daoName, setDaoName] = useState("");
+  const [daoLogo, setDaoLogo] = useState("");
 
   const tryRegister = async () => {
     daoCanister.register(Principal.fromText(canisterInputField.current.value))
   }
 
   const submitProposal = async () => {
-    daoCanister.submit_proposal(proposalDescription.current.value, proposalBody.current.value, { poll: null })
+    let propVariant = {}
+
+    if (proposalType === "poll") {
+      propVariant = { poll: null }
+    }
+    else if (proposalType === "change_logo") {
+      propVariant = { change_logo: proposalChange }
+    }
+    else if (proposalType === "change_name") {
+      propVariant = { change_name: proposalChange }
+    }
+
+    console.log(propVariant)
+
+    setProposalTitle("")
+    setProposalDescription("")
+    setProposalChange("")
+    let res = await daoCanister.submit_proposal(proposalDescription.current.value, proposalBody.current.value, propVariant)
+    if (res.ok) {
+      setProposals((oldProposals) => { return [res.ok, ...oldProposals] })
+    } else if (res.err) {
+      console.log(res.err)
+    }
   }
 
   const vote = (id, vote) => {
@@ -104,23 +139,40 @@ function App() {
   }, [principal]);
 
   useEffect(() => {
+    const init = async () => {
+      let params = await DAO.get_dao_parameters()
+      setDaoName(params.name)
+      setDaoLogo(params.logo)
+    }
+    init()
+  }, []);
+
+  const fetchProposals = async () => {
+    if (daoCanister == null) return;
+    if (isRegistered) {
+      //update proposals
+      let proposals = await daoCanister.get_all_proposals_with_vote();
+      setProposals(proposals)
+    }
+    else {
+      const res = await daoCanister.is_registered();
+      console.log(res)
+      if (res) {
+        setIsRegistered(true)
+      } else {
+        setIsRegistered(false)
+      }
+    }
+  }
+
+  useEffect(() => {
+    const init = async () => {
+      fetchProposals()
+    }
+    init()
     const intervalId = setInterval(async () => {
-      if (daoCanister == null) return;
-      if (isRegistered) {
-        //update proposals
-        let proposals = await daoCanister.get_all_proposals_with_vote();
-        setProposals(proposals)
-      }
-      else {
-        const res = await daoCanister.is_registered();
-        console.log(res)
-        if (res) {
-          setIsRegistered(true)
-        } else {
-          setIsRegistered(false)
-        }
-      }
-    }, 2000);
+      fetchProposals()
+    }, 10000);
     return () => clearInterval(intervalId);
   }, [isRegistered]);
 
@@ -139,11 +191,19 @@ function App() {
     setIsRegistered(false)
   }
 
+  // Handle change event on select tag
+  const handleChange = (event) => {
+    //console.log(event.target.value)
+    setProposalType(event.target.value);
+  }
+
   return (
     <div className="bg-gray-900 w-screen h-screen flex flex-col  ">
       <div className="self-end p-8 ">
         {principal && <button onClick={disconnect}>Disconnect</button>}
         {!principal && <button onClick={connect}>Connect</button>}
+        {<p>{daoName}</p>}
+        {<p>{daoLogo}</p>}
       </div>
       <div className="flex flex-row justify-center items-center">
         <a
@@ -164,27 +224,37 @@ function App() {
         <p>Logged in</p>
         {isRegistered && <>
           <p>Registered!!</p>
-          <div>
+          <div className='flex-col flex justify-center items-center self-center'>
             <p>Create Proposal</p>
-            <input ref={proposalDescription}></input>
-            <input ref={proposalBody}></input>
+            <input ref={proposalDescription} className='max-w-md m-1'></input>
+            <input ref={proposalBody} className='max-w-5xl m-1 h-16'></input>
+            {proposalType === "update_title" ? <input className="text-black w-5/12 h-44" type="text"
+              placeholder="New name"
+              value={proposalChange}
+              onChange={(e) => setProposalChange(e.target.value)}>
+
+            </input>
+              : null}
+            {proposalType === "change_logo" ? <input className="text-black w-5/12 h-44" type="text"
+              placeholder="Logo URL"
+              value={proposalChange}
+              onChange={(e) => setProposalChange(e.target.value)}>
+
+            </input>
+              : null}
+            <select className="text-black  w-5/12" onChange={handleChange}>
+              {options.map((option) => (
+                <option className="text-black  w-5/12" key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
             <button onClick={submitProposal}>Submit</button>
           </div>
 
-          <div className='flex flex-row'>
+          <div className='flex flex-row flex-wrap'>
             {proposals.map((e, i) => {
-              console.log(e)
-              return (
-                <div className='flex flex-col m-16'>
-                  <p>id : {e.id}</p>
-                  <p>title: {e.title}</p>
-                  <p>description: {e.description}</p>
-                  <p>approves: {e.approve_votes}</p>
-                  <p>rejects: {e.reject_votes}</p>
-                  <p>rejects: {JSON.stringify(e.state)}</p>
-                  <button onClick={() => { vote(e.id, "approve") }}>Approve</button>
-                  <button onClick={() => { vote(e.id, "reject") }}>Reject</button>
-                </div>)
+              return (<Proposal vote={vote} element={e}></Proposal>)
             })}
           </div>
         </>

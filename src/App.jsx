@@ -54,11 +54,13 @@ function App() {
 
     console.log(propVariant)
 
-    setProposalTitle("")
-    setProposalDescription("")
-    setProposalChange("")
+    // setProposalTitle("")
+    // setProposalDescription("")
+    // setProposalChange("")
     let res = await daoCanister.submit_proposal(proposalDescription.current.value, proposalBody.current.value, propVariant)
     if (res.ok) {
+      console.log("res.ok")
+      console.log(res.ok)
       setProposals((oldProposals) => { return [res.ok, ...oldProposals] })
     } else if (res.err) {
       console.log(res.err)
@@ -228,7 +230,7 @@ function App() {
             <p>Create Proposal</p>
             <input ref={proposalDescription} className='max-w-md m-1'></input>
             <input ref={proposalBody} className='max-w-5xl m-1 h-16'></input>
-            {proposalType === "update_title" ? <input className="text-black w-5/12 h-44" type="text"
+            {proposalType === "change_name" ? <input className="text-black w-5/12 h-44" type="text"
               placeholder="New name"
               value={proposalChange}
               onChange={(e) => setProposalChange(e.target.value)}>
@@ -254,7 +256,7 @@ function App() {
 
           <div className='flex flex-row flex-wrap'>
             {proposals.map((e, i) => {
-              return (<Proposal vote={vote} element={e}></Proposal>)
+              return (<Proposal vote={vote} element={e} key={i}></Proposal>)
             })}
           </div>
         </>

@@ -17,22 +17,18 @@ import Map "mo:map/Map";
 import G "GovernanceTypes";
 import Bool "mo:base/Bool";
 import List "mo:base/List";
+import Notifier "./Notifier";
+import Cycles "mo:base/ExperimentalCycles";
 
 shared ({ caller }) actor class DAO() = this {
 
   //TODO change on main
   let IS_PROD = true;
-  let local_notifier_principal = "rkp4c-7iaaa-aaaaa-aaaca-cai";
-  var notifier_principal = "rkp4c-7iaaa-aaaaa-aaaca-cai";
-  if (IS_PROD) {
-    notifier_principal := local_notifier_principal;
-  };
-
+  let CYCLE_AMOUNT : Nat = 1_000_000_000_000;
+  stable var notifier_canister_id : Text = "";
   public type NotifierType = actor {
     check_nft_canister : (user : Principal, canister : Principal, callback : shared (Principal, Principal) -> ()) -> ();
   };
-
-  let notifier_canister = actor (notifier_principal) : NotifierType;
 
   type ProposalId = G.ProposalId;
   type Proposal = G.Proposal;
@@ -48,9 +44,11 @@ shared ({ caller }) actor class DAO() = this {
   private stable let used_canisters = Map.new<Principal, Principal>(phash);
   private stable let user_votes = Map.new<Principal, Map.Map<ProposalId, Vote>>(phash);
   stable var custodians = List.make<Principal>(caller);
+  //TODO add your principles here
   custodians := List.push(Principal.fromText("qd7jq-yj6ub-xgigj-2fl3e-nslda-k6bsu-rfpeh-o6npt-jdegf-snm5d-wqe"), custodians);
+  custodians := List.push(Principal.fromText("m2eif-say6u-qkqyb-x57ff-apqcy-phss6-f3k55-5wynb-l3qq5-u4lge-qqe"), custodians);
 
-  /////////////
+  ////////////
   //GOVERNANCE
   ////////////
 
@@ -94,6 +92,13 @@ shared ({ caller }) actor class DAO() = this {
     ignore Map.put(used_canisters, phash, canister, user);
   };
 
+  private func create_notifier_canister() : async () {
+    Cycles.add(CYCLE_AMOUNT);
+    let notifier_actor = await Notifier.Notifier();
+    let principal = Principal.fromActor(notifier_actor);
+    notifier_canister_id := Principal.toText(principal);
+  };
+
   public func notifier_callback(user : Principal, canister : Principal) : () {
     Debug.print("notifier_callback");
     Debug.print(debug_show (user));
@@ -114,7 +119,12 @@ shared ({ caller }) actor class DAO() = this {
 
     //   };
     // };
+
     //contact notifier
+    if (notifier_canister_id == "") {
+      await create_notifier_canister();
+    };
+    let notifier_canister = actor (notifier_canister_id) : NotifierType;
     notifier_canister.check_nft_canister(caller, canister, notifier_callback);
   };
 

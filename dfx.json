@@ -6,10 +6,6 @@
         }
     },
     "canisters": {
-        "DIP721": {
-            "type": "motoko",
-            "main": "backend/DIP721/Main.mo"
-        },
         "DAO": {
             "type": "motoko",
             "main": "backend/DAO/Main.mo"
@@ -17,10 +13,6 @@
         "notifier": {
             "type": "motoko",
             "main": "backend/DAO/Notifier.mo"
-        },
-        "storage": {
-            "type": "motoko",
-            "main": "backend/Storage/FileStorage.mo"
         },
         "frontend": {
             "dependencies": [

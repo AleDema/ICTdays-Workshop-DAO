@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from 'react';
 import './index.css';
 import motokoLogo from './assets/motoko_moving.png';
 import motokoShadowLogo from './assets/motoko_shadow.png';
-import reactLogo from './assets/react.svg';
 import RootLayout from './layouts/RootLayout';
 import ErrorPage from './pages/ErrorPage';
 import { idlFactory as daoFactory } from './declarations/DAO';
@@ -51,7 +50,7 @@ function App() {
     setDaoCanister(daoActor)
     console.log(daoActor)
     const res = await daoActor.is_registered();
-    console.log(res)
+    console.log(`registered: ${res}`)
     if (res) {
       setIsRegistered(true)
     } else {
@@ -67,8 +66,7 @@ function App() {
 
       // Whitelist
       const whitelist = [
-        process.env.DIP721_CANISTER_ID,
-        process.env.STORAGE_CANISTER_ID
+        process.env.DAO_CANISTER_ID,
       ];
 
       let host = "https://mainnet.dfinity.network"
@@ -107,6 +105,7 @@ function App() {
 
   useEffect(() => {
     const intervalId = setInterval(async () => {
+      if (daoCanister == null) return;
       if (isRegistered) {
         //update proposals
         let proposals = await daoCanister.get_all_proposals();
@@ -133,8 +132,11 @@ function App() {
   const disconnect = async () => {
     window.ic.plug.sessionManager.disconnect()
 
-    setPrincipal(null)
     //clean all state
+    setPrincipal(null)
+    setProposals(null)
+    setDaoCanister(null)
+    setIsRegistered(false)
   }
 
   return (
@@ -144,12 +146,6 @@ function App() {
         {!principal && <button onClick={connect}>Connect</button>}
       </div>
       <div className="flex flex-row justify-center items-center">
-        <a href="https://vitejs.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite " alt="Vite logo" />
-        </a>
-        <a href="https://reactjs.org" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
         <a
           href="https://internetcomputer.org/docs/current/developer-docs/build/cdks/motoko-dfinity/motoko/"
           target="_blank"
@@ -182,7 +178,7 @@ function App() {
                 <div className='flex flex-col m-16'>
                   <p>id : {e.id}</p>
                   <p>title: {e.title}</p>
-                  <p>descitpion: {e.description}</p>
+                  <p>description: {e.description}</p>
                   <p>approves: {e.approve_votes}</p>
                   <p>rejects: {e.reject_votes}</p>
                   <p>rejects: {JSON.stringify(e.state)}</p>
@@ -220,5 +216,3 @@ const router = createBrowserRouter(createRoutesFromElements(
 export default () => (
   <RouterProvider router={router} />
 )
-
-// export default App;

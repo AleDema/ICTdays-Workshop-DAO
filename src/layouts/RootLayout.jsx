@@ -4,7 +4,9 @@ import { Outlet } from "react-router-dom";
 function RootLayout() {
   return (
     <>
-      <Outlet></Outlet>
+      <div className="bg-gray-900 w-screen h-screen flex flex-col overflow-auto ">
+        <Outlet></Outlet>
+      </div>
     </>
   )
 }

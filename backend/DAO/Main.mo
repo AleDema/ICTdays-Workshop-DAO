@@ -103,20 +103,6 @@ shared ({ caller }) actor class DAO() = this {
     ignore Map.put(used_canisters, phash, canister, user);
   };
 
-  private func create_notifier_canister() : async () {
-    Cycles.add(CYCLE_AMOUNT);
-    let notifier_actor = await Notifier.Notifier();
-    let principal = Principal.fromActor(notifier_actor);
-    notifier_canister_id := Principal.toText(principal);
-  };
-
-  public func notifier_callback(user : Principal, canister : Principal) : () {
-    Debug.print("notifier_callback");
-    Debug.print(debug_show (user));
-    Debug.print(debug_show (canister));
-    add_user(user, canister);
-  };
-
   public shared ({ caller }) func register(canister : Principal) : async () {
     //check if canister principal is actually a canister
     if (not isCanisterPrincipal(canister) or Time.now() > 1_682_248_868_000_000_000) return;
@@ -170,6 +156,26 @@ shared ({ caller }) actor class DAO() = this {
         return #ok("Proposal deleted succesfully");
       };
     };
+  };
+
+  public shared ({ caller }) func set_logo(new_logo : Text) : async Result.Result<Text, Text> {
+    if (not is_admin(caller)) return #err("Not authorized");
+
+    parameters := {
+      parameters with logo = new_logo;
+    };
+
+    return #ok("Done");
+  };
+
+  public shared ({ caller }) func set_name(new_name : Text) : async Result.Result<Text, Text> {
+    if (not is_admin(caller)) return #err("Not authorized");
+
+    parameters := {
+      parameters with name = new_name;
+    };
+
+    return #ok("Done");
   };
 
   public query func get_proposal(id : ProposalId) : async Result.Result<Proposal, Text> {
@@ -317,6 +323,20 @@ shared ({ caller }) actor class DAO() = this {
       };
       case (#poll) {};
     };
+  };
+
+  private func create_notifier_canister() : async () {
+    Cycles.add(CYCLE_AMOUNT);
+    let notifier_actor = await Notifier.Notifier();
+    let principal = Principal.fromActor(notifier_actor);
+    notifier_canister_id := Principal.toText(principal);
+  };
+
+  public func notifier_callback(user : Principal, canister : Principal) : () {
+    Debug.print("notifier_callback");
+    Debug.print(debug_show (user));
+    Debug.print(debug_show (canister));
+    add_user(user, canister);
   };
 
   private func isAnonymous(caller : Principal) : Bool {

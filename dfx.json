@@ -10,10 +10,6 @@
             "type": "motoko",
             "main": "backend/DAO/Main.mo"
         },
-        "notifier": {
-            "type": "motoko",
-            "main": "backend/DAO/Notifier.mo"
-        },
         "frontend": {
             "dependencies": [
                 "DAO"

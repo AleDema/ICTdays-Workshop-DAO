@@ -4,6 +4,7 @@ import motokoLogo from './assets/motoko_moving.png';
 import motokoShadowLogo from './assets/motoko_shadow.png';
 import RootLayout from './layouts/RootLayout';
 import ErrorPage from './pages/ErrorPage';
+import ProposalPage from './pages/ProposalPage';
 import { idlFactory as daoFactory } from './declarations/DAO';
 import { DAO } from './declarations/DAO';
 import { Principal } from '@dfinity/principal';
@@ -99,38 +100,40 @@ function App() {
 
   const verifyConnection = async () => {
     const connected = await window.ic.plug.isConnected();
-    if (!connected) {
 
-      // Whitelist
-      const whitelist = [
-        process.env.DAO_CANISTER_ID,
-      ];
+    if (connected) {
+      window.ic.plug.sessionManager.disconnect()
+    };
 
-      let host = "https://mainnet.dfinity.network"
-      if (process.env.DFX_NETWORK !== "ic") {
-        host = "http://127.0.0.1:4943";
-      }
+    // Whitelist
+    const whitelist = [
+      process.env.DAO_CANISTER_ID,
+    ];
 
-      // Callback to print sessionData
-      const onConnectionUpdate = async () => {
-        console.log(window.ic.plug.sessionManager.sessionData)
-        let principal = await window.ic.plug.getPrincipal()
-        setPrincipal(Principal.fromUint8Array(principal._arr))
+    let host = "https://mainnet.dfinity.network"
+    if (process.env.DFX_NETWORK !== "ic") {
+      host = "http://127.0.0.1:4943";
+    }
 
-      }
-      // Make the request
-      try {
-        const publicKey = await window.ic.plug.requestConnect({
-          whitelist,
-          host,
-          onConnectionUpdate,
-          timeout: 50000
-        });
+    // Callback to print sessionData
+    const onConnectionUpdate = async () => {
+      console.log(window.ic.plug.sessionManager.sessionData)
+      let principal = await window.ic.plug.getPrincipal()
+      setPrincipal(principal)
 
-        console.log(`The connected user's public key is:`, publicKey);
-      } catch (e) {
-        console.log(e);
-      }
+    }
+    // Make the request
+    try {
+      const publicKey = await window.ic.plug.requestConnect({
+        whitelist,
+        host,
+        onConnectionUpdate,
+        timeout: 50000
+      });
+
+      console.log(`The connected user's public key is:`, publicKey);
+    } catch (e) {
+      console.log(e);
     }
     let principal = await window.ic.plug.getPrincipal()
     setPrincipal(principal)
@@ -150,6 +153,7 @@ function App() {
   }, []);
 
   const fetchProposals = async () => {
+    console.log("loop")
     if (daoCanister == null) return;
     if (isRegistered) {
       //update proposals
@@ -184,13 +188,13 @@ function App() {
   }
 
   const disconnect = async () => {
-    window.ic.plug.sessionManager.disconnect()
-
     //clean all state
     setPrincipal(null)
     setProposals(null)
     setDaoCanister(null)
     setIsRegistered(false)
+    window.ic.plug.sessionManager.disconnect()
+
   }
 
   // Handle change event on select tag
@@ -200,12 +204,12 @@ function App() {
   }
 
   return (
-    <div className="bg-gray-900 w-screen h-screen flex flex-col  ">
+    <>
       <div className="self-end p-8 ">
         {principal && <button onClick={disconnect}>Disconnect</button>}
         {!principal && <button onClick={connect}>Connect</button>}
         {<p>{daoName}</p>}
-        {<p>{daoLogo}</p>}
+        {daoLogo !== "" && <img src={daoLogo} className="logo" alt="dao logo" />}
       </div>
       <div className="flex flex-row justify-center items-center">
         <a
@@ -223,9 +227,7 @@ function App() {
         </a>
       </div>
       {principal && <>
-        <p>Logged in</p>
         {isRegistered && <>
-          <p>Registered!!</p>
           <div className='flex-col flex justify-center items-center self-center'>
             <p>Create Proposal</p>
             <input ref={proposalDescription} className='max-w-md m-1'></input>
@@ -262,11 +264,12 @@ function App() {
         </>
         }
 
-        {!isRegistered && <>
-          <p>Insert your canister NFT id to register:</p>
-          <input ref={canisterInputField}></input>
-          <button onClick={tryRegister}>submit</button>
-        </>
+        {isRegistered === false &&
+          <div className='max-w-md m-1'>
+            <p>Insert your canister NFT id to register:</p>
+            <input ref={canisterInputField}></input>
+            <button onClick={tryRegister}>submit</button>
+          </div>
         }
       </>
       }
@@ -274,13 +277,14 @@ function App() {
       {!principal && <>
         <p>Login to interact...</p>
       </>}
-    </div>
+    </>
   );
 }
 
 const router = createBrowserRouter(createRoutesFromElements(
   <Route path="/" element={<RootLayout />} errorElement={<ErrorPage />}>
     <Route index element={<App />} />
+    <Route path="/proposal/:id" element={<ProposalPage />} />
   </Route>
 ));
 

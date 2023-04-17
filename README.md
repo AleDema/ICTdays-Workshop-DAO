@@ -1,19 +1,12 @@
-# Vite + React + Motoko
+# ICTDao
 
-### Get started directly in your browser:
-
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/rvanasa/vite-react-motoko)
-
-This project template gives you everything you need to build a Web3 application on the [Internet Computer](https://internetcomputer.org/).
+Boilerplate code for ICTdays ICP workshop
 
 ## Create a New Project
 
 Make sure that [Node.js](https://nodejs.org/en/) `>= 16.x` and [`dfx`](https://internetcomputer.org/docs/current/developer-docs/build/install-upgrade-remove) `>= 0.12.x` are installed on your system.
 
-Run the following commands in a new, empty project directory:
-
 ```sh
-npx degit rvanasa/vite-react-motoko # Download this starter project
 dfx start --clean --background # Run dfx in the background
 npm run setup # Install packages, deploy canisters, and generate type bindings
 
@@ -28,6 +21,7 @@ When ready, run `dfx deploy` to build and deploy your application.
 - [React](https://reactjs.org/): a component-based UI library
 - [TypeScript](https://www.typescriptlang.org/): JavaScript extended with syntax for types
 - [Sass](https://sass-lang.com/): an extended syntax for CSS stylesheets
+- [Tailwind](https://tailwindcss.com/): an extended syntax for CSS stylesheets
 - [Prettier](https://prettier.io/): code formatting for a wide range of supported languages
 - [Motoko](https://github.com/dfinity/motoko#readme): a safe and simple programming language for the Internet Computer
 - [mo-dev](https://github.com/dfinity/motoko-dev-server#readme): a live reload development server for Motoko

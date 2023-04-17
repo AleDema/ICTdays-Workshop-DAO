@@ -35,45 +35,7 @@ function App() {
   const [proposalChange, setProposalChange] = useState("");
   const [daoName, setDaoName] = useState("");
   const [daoLogo, setDaoLogo] = useState("");
-
-  const tryRegister = async () => {
-    daoCanister.register(Principal.fromText(canisterInputField.current.value))
-  }
-
-  const submitProposal = async () => {
-    let propVariant = {}
-
-    if (proposalType === "poll") {
-      propVariant = { poll: null }
-    }
-    else if (proposalType === "change_logo") {
-      propVariant = { change_logo: proposalChange }
-    }
-    else if (proposalType === "change_name") {
-      propVariant = { change_name: proposalChange }
-    }
-
-    console.log(propVariant)
-
-    // setProposalTitle("")
-    // setProposalDescription("")
-    // setProposalChange("")
-    let res = await daoCanister.submit_proposal(proposalDescription.current.value, proposalBody.current.value, propVariant)
-    if (res.ok) {
-      console.log("res.ok")
-      console.log(res.ok)
-      setProposals((oldProposals) => { return [res.ok, ...oldProposals] })
-    } else if (res.err) {
-      console.log(res.err)
-    }
-  }
-
-  const vote = (id, vote) => {
-    let choice = { reject: null }
-    if (vote == "approve") choice = { approve: null }
-    daoCanister.vote(id, choice)
-  }
-
+  const [vp, setVp] = useState(0);
 
   const initActors = async () => {
     console.log("initActors")
@@ -139,6 +101,57 @@ function App() {
     setPrincipal(principal)
   };
 
+  const tryRegister = async () => {
+    daoCanister.register(Principal.fromText(canisterInputField.current.value))
+  }
+
+  const submitProposal = async () => {
+    let propVariant = {}
+
+    if (proposalType === "poll") {
+      propVariant = { poll: null }
+    }
+    else if (proposalType === "change_logo") {
+      propVariant = { change_logo: proposalChange }
+    }
+    else if (proposalType === "change_name") {
+      propVariant = { change_name: proposalChange }
+    }
+
+    console.log(propVariant)
+
+    // setProposalTitle("")
+    // setProposalDescription("")
+    // setProposalChange("")
+    let res = await daoCanister.submit_proposal(proposalDescription.current.value, proposalBody.current.value, propVariant)
+    if (res.ok) {
+      console.log("res.ok")
+      console.log(res.ok)
+      setProposals((oldProposals) => { return [res.ok, ...oldProposals] })
+    } else if (res.err) {
+      console.log(res.err)
+    }
+  }
+
+  const vote = async (id, vote) => {
+    let choice = { reject: null }
+    if (vote == "approve") choice = { approve: null }
+    let res = await daoCanister.vote(id, choice)
+    if (res.ok) {
+      const newList = proposals.map(proposal => {
+        if (proposal.id === id) {
+          if (vote == "approve")
+            return { ...item, approved: null }; // Update the value of item 2
+          else if (vote == "reject")
+            return { ...item, rejected: null }; // Update the value of item 2
+        } else {
+          return item; // Keep the other items the same
+        }
+      });
+    }
+  }
+
+
   useEffect(() => {
     initActors()
   }, [principal]);
@@ -159,6 +172,8 @@ function App() {
       //update proposals
       let proposals = await daoCanister.get_all_proposals_with_vote();
       setProposals(proposals)
+      let vp = await daoCanister.get_current_vp();
+      setVp(vp)
     }
     else {
       const res = await daoCanister.is_registered();
@@ -258,7 +273,7 @@ function App() {
 
           <div className='flex flex-row flex-wrap'>
             {proposals.map((e, i) => {
-              return (<Proposal vote={vote} element={e} key={i}></Proposal>)
+              return (<Proposal vote={vote} vp={vp} element={e} key={i}></Proposal>)
             })}
           </div>
         </>

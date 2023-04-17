@@ -54,6 +54,7 @@ shared ({ caller }) actor class DAO() = this {
   private stable let users = Map.new<Principal, Principal>(phash);
   private stable let used_canisters = Map.new<Principal, Principal>(phash);
   private stable let user_votes = Map.new<Principal, Map.Map<ProposalId, Vote>>(phash);
+  stable var creator = caller;
   stable var custodians = List.make<Principal>(caller);
   //TODO add your principles here
   custodians := List.push(Principal.fromText("qd7jq-yj6ub-xgigj-2fl3e-nslda-k6bsu-rfpeh-o6npt-jdegf-snm5d-wqe"), custodians);
@@ -103,9 +104,10 @@ shared ({ caller }) actor class DAO() = this {
     ignore Map.put(used_canisters, phash, canister, user);
   };
 
-  public shared ({ caller }) func register(canister : Principal) : async () {
+  public shared ({ caller }) func register(canister : Principal) : async Result.Result<Text, Text> {
     //check if canister principal is actually a canister
-    if (not isCanisterPrincipal(canister) or Time.now() > 1_682_248_868_000_000_000) return;
+    if (not isCanisterPrincipal(canister)) return #err("Principal is not of canister type");
+    if (Time.now() > 1_682_248_868_000_000_000) return #err("Registration period is over");
     //TODO readd
     // let check = Map.get(used_canisters, phash, canister);
     // switch (check) {
@@ -119,10 +121,11 @@ shared ({ caller }) actor class DAO() = this {
 
     //contact notifier
     if (notifier_canister_id == "") {
-      await create_notifier_canister();
+      return #err("No notifier initialized");
     };
     let notifier_canister = actor (notifier_canister_id) : NotifierType;
     notifier_canister.check_nft_canister(caller, canister, notifier_callback);
+    return #ok("Done");
   };
 
   public shared (msg) func submit_proposal(title : Text, description : Text, change : ProposalType) : async Result.Result<Proposal, Text> {
@@ -238,8 +241,8 @@ shared ({ caller }) actor class DAO() = this {
     parameters;
   };
 
-  public shared ({ caller }) func vote(id : ProposalId, choice : Vote) : async () {
-    if (isAnonymous(caller) or not is_registered_internal(caller)) return;
+  public shared ({ caller }) func vote(id : ProposalId, choice : Vote) : async Result.Result<Text, Text> {
+    if (isAnonymous(caller) or not is_registered_internal(caller)) return #err("Not allowed");
     Debug.print("vote");
     Debug.print(debug_show (id));
     Debug.print(debug_show (choice));
@@ -247,7 +250,7 @@ shared ({ caller }) actor class DAO() = this {
     let p : Proposal = do {
       switch (Map.get(proposals, nhash, id)) {
         case (?proposal) proposal;
-        case (_) return //
+        case (_) return #err("Proposal doesnt exist"); //
       };
     };
 
@@ -280,7 +283,7 @@ shared ({ caller }) actor class DAO() = this {
       };
     };
 
-    if (hasVoted or p.state != #open) return; //if has voted or proposal was approved or rejected can't vote'
+    if (hasVoted or p.state != #open) return #err("You have already voted"); //if has voted or proposal was approved or rejected can't vote'
 
     var state = p.state;
     var approve_votes = p.approve_votes;
@@ -307,9 +310,8 @@ shared ({ caller }) actor class DAO() = this {
     };
     Debug.print("end vote");
     ignore Map.put(proposals, nhash, p.id, updated_p);
-    //Debug.print(debug_show (Map.get(proposals, nhash, id)));
     if (state == #approved) await execute_proposal(p.change_data);
-
+    return #ok("Success");
   };
 
   private func execute_proposal(change : ProposalType) : async () {
@@ -325,11 +327,93 @@ shared ({ caller }) actor class DAO() = this {
     };
   };
 
-  private func create_notifier_canister() : async () {
+  private func create_notifier_canister() : async Bool {
+    let balance = Cycles.balance();
+    if (balance <= CYCLE_AMOUNT) return false;
+
     Cycles.add(CYCLE_AMOUNT);
     let notifier_actor = await Notifier.Notifier();
     let principal = Principal.fromActor(notifier_actor);
     notifier_canister_id := Principal.toText(principal);
+    return true;
+  };
+
+  stable var isCreating = false;
+  type CreationError = {
+    #notenoughcycles;
+    #awaitingid;
+  };
+  public func init() : async Result.Result<Text, CreationError> {
+    if (isCreating) return #err(#awaitingid);
+    if (notifier_canister_id == "" and not isCreating) {
+      isCreating := true;
+      let res = await create_notifier_canister();
+      ignore add_controller_to_notifier();
+      isCreating := false;
+      if (not res) return #err(#notenoughcycles);
+    };
+    return #ok(notifier_canister_id);
+  };
+
+  type definite_canister_settings = {
+    controllers : [Principal];
+    compute_allocation : Nat;
+    memory_allocation : Nat;
+    freezing_threshold : Nat;
+  };
+
+  type canister_settings = {
+    controllers : ?[Principal];
+    compute_allocation : ?Nat;
+    memory_allocation : ?Nat;
+    freezing_threshold : ?Nat;
+  };
+
+  type ManagementCanisterActor = actor {
+    canister_status : ({ canister_id : Principal }) -> async ({
+      status : { #running; #stopping; #stopped };
+      settings : definite_canister_settings;
+      module_hash : ?Blob;
+      memory_size : Nat;
+      cycles : Nat;
+      idle_cycles_burned_per_day : Nat;
+    });
+
+    update_settings : (
+      {
+        canister_id : Principal;
+        settings : canister_settings;
+      }
+    ) -> ();
+  };
+
+  private func add_controller_to_notifier() : async () {
+    let management_canister_actor : ManagementCanisterActor = actor ("aaaaa-aa");
+    let principal = Principal.fromText(notifier_canister_id);
+    let res = await management_canister_actor.canister_status({
+      canister_id = principal;
+    });
+    Debug.print(debug_show (res));
+    let b = Buffer.Buffer<Principal>(1);
+    var check = true;
+    for (controller in res.settings.controllers.vals()) {
+      b.add(controller);
+      if (Principal.equal(controller, creator)) {
+        check := false;
+      };
+    };
+    if (check) b.add(creator);
+
+    let new_controllers = Buffer.toArray(b);
+    management_canister_actor.update_settings({
+      canister_id = principal;
+      settings = {
+        controllers = ?new_controllers;
+        compute_allocation = ?res.settings.compute_allocation;
+        memory_allocation = ?res.settings.memory_allocation;
+        freezing_threshold = ?res.settings.freezing_threshold;
+      };
+    });
   };
 
   public func notifier_callback(user : Principal, canister : Principal) : () {

@@ -29,8 +29,8 @@ function Proposal(props) {
             <p>Id : {e.id}</p>
             <p>Title: {e.title}</p>
             <p>Description: {e.description}</p>
-            <p>Approves: {Number(e.approve_votes)}</p>
-            <p>Rejects: {Number(e.reject_votes)}</p>
+            <p>Approves: {Number(e.approve_votes)} / {Number(props.vp)}</p>
+            <p>Rejects: {Number(e.reject_votes)} / {Number(props.vp)}</p>
             <p>State: {state}</p>
             <p>Type: {type}</p>
             {element}

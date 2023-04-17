@@ -22,8 +22,6 @@ import Cycles "mo:base/ExperimentalCycles";
 
 shared ({ caller }) actor class DAO() = this {
 
-  //TODO change on main
-  let IS_PROD = true;
   let CYCLE_AMOUNT : Nat = 1_000_000_000_000;
   stable var notifier_canister_id : Text = "";
   public type NotifierType = actor {
@@ -112,7 +110,7 @@ shared ({ caller }) actor class DAO() = this {
     // let check = Map.get(used_canisters, phash, canister);
     // switch (check) {
     //   case (?used) {
-    //     return;
+    //     return #err("Canister ID already used");
     //   };
     //   case (null) {
 

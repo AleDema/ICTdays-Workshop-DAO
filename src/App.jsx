@@ -102,7 +102,8 @@ function App() {
   };
 
   const tryRegister = async () => {
-    daoCanister.register(Principal.fromText(canisterInputField.current.value))
+    let res = await daoCanister.register(Principal.fromText(canisterInputField.current.value))
+    console.log(res) //TODO add errors in UI?
   }
 
   const submitProposal = async () => {
@@ -141,11 +142,11 @@ function App() {
       const newList = proposals.map(proposal => {
         if (proposal.id === id) {
           if (vote == "approve")
-            return { ...item, approved: null }; // Update the value of item 2
+            return { ...item, approved: null };
           else if (vote == "reject")
-            return { ...item, rejected: null }; // Update the value of item 2
+            return { ...item, rejected: null };
         } else {
-          return item; // Keep the other items the same
+          return item;
         }
       });
     }

@@ -25,8 +25,6 @@ module GovernanceTypes {
     vote : ?Vote;
   };
 
-  // pType : ProposalType
-
   public type ProposalType = {
     #change_name : Text; //just text
     #change_logo : Text; //url
@@ -39,13 +37,8 @@ module GovernanceTypes {
     #open;
   };
 
-  //TODO change this
   public type Vote = {
     #approve;
     #reject;
   };
-
-  // public type Vote = {
-  //   vote : VotingOptions;
-  // };
 };

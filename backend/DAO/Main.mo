@@ -129,6 +129,20 @@ shared ({ caller }) actor class DAO() = this {
   public shared (msg) func submit_proposal(title : Text, description : Text, change : ProposalType) : async Result.Result<Proposal, Text> {
     if (isAnonymous(msg.caller) or not is_registered_internal(msg.caller)) return #err("Not authorized");
 
+    // check title, description and changeData length
+    if (Text.size(title) > 20) return #err("Title too long");
+    if (Text.size(description) > 50) return #err("Description too long");
+    switch (change) {
+      case (#change_name(text)) {
+        if (Text.size(text) > 20) return #err("New Name too long");
+      };
+      case (#change_logo(text)) {
+        if (Text.size(text) > 100) return #err("New Logo too long");
+      };
+      case (#poll) {
+
+      };
+    };
     let p : Proposal = {
       id = proposal_id_counter;
       title = title;
@@ -198,7 +212,7 @@ shared ({ caller }) actor class DAO() = this {
   };
 
   public query func get_current_vp() : async Nat {
-    return Map.size(users) / 2;
+    return Map.size(users);
   };
 
   private func get_user_vote_on_proposal(user : Principal, proposal_id : ProposalId) : ?Vote {
@@ -223,11 +237,11 @@ shared ({ caller }) actor class DAO() = this {
       let vote : ?Vote = get_user_vote_on_proposal(caller, value.id);
       switch (vote) {
         case (null) {
-          Debug.print("null vote");
+          // Debug.print("null vote");
           b.add({ value with vote = null });
         };
         case (?v) {
-          Debug.print(" vote");
+          // Debug.print(" vote");
           b.add({ value with vote = ?v });
         };
       };

@@ -1,5 +1,11 @@
 {
   "DAO": {
     "ic": "wqaxj-6iaaa-aaaap-qbbeq-cai"
+  },
+  "frontend": {
+    "ic": "wzd4v-iaaaa-aaaap-qbbfa-cai"
+  },
+  "notifier": {
+    "ic": "w6c2b-fyaaa-aaaap-qbbfq-cai"
   }
 }

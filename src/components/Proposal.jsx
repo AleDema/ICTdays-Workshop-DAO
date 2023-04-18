@@ -1,23 +1,27 @@
 import React from 'react'
-import { Link } from 'react-router-dom';
+
 function Proposal(props) {
     let e = props.element
     console.log(e)
-    let state = "open"
+    let state = "Open"
     if (!e) return;
-    if (e.state.approved === null) state = "approved"
-    else if (e.state.rejected === null) state = "rejected"
+    if (e.state.approved === null) state = "Approved"
+    else if (e.state.rejected === null) state = "Rejected"
     let element = null
     if (e.vote && e.vote.length > 0) {
-        if (e.vote[0].approved === null)
+        if (e.vote[0].approve === null)
             element = <p>Your Vote: Approve</p>
-        else if (e.vote[0].rejected === null)
+        else if (e.vote[0].reject === null)
             element = <p>Your Vote: Reject</p>
     } else {
-        element = <>
-            <button onClick={() => { props.vote(e.id, "approve") }}>Approve</button>
-            <button onClick={() => { props.vote(e.id, "reject") }}>Reject</button>
-        </>
+        if (e.state.open === null) {
+            element = <>
+                <button onClick={() => { props.vote(e.id, "approve") }}>Approve</button>
+                <button onClick={() => { props.vote(e.id, "reject") }}>Reject</button>
+            </>
+        } else {
+            element = <p>Your Vote: None</p>
+        }
     }
     let type = "Poll"
     //if (change_data.poll===null) type = "poll"
@@ -26,7 +30,7 @@ function Proposal(props) {
     return (
         <div className='flex flex-col m-16 rounded-md border-indigo-800 border p-1 w-80 h-80'>
 
-            <p>Id : {e.id}</p>
+            <p>Id : {Number(e.id)}</p>
             <p>Title: {e.title}</p>
             <p>Description: {e.description}</p>
             <p>Approves: {Number(e.approve_votes)} / {Number(props.vp)}</p>

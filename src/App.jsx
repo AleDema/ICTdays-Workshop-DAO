@@ -27,44 +27,38 @@ function App() {
   const [principal, setPrincipal] = useState(null);
   const [daoCanister, setDaoCanister] = useState(null);
   const [isRegistered, setIsRegistered] = useState(null);
+  const [awaitingConfirm, setAwaitingConfirm] = useState(false);
   const [proposals, setProposals] = useState([]);
   const canisterInputField = useRef(null);
+  const proposalTitle = useRef(null);
   const proposalDescription = useRef(null);
-  const proposalBody = useRef(null);
   const [proposalType, setProposalType] = useState("poll");
   const [proposalChange, setProposalChange] = useState("");
   const [daoName, setDaoName] = useState("");
   const [daoLogo, setDaoLogo] = useState("");
   const [vp, setVp] = useState(0);
 
-  const initActors = async () => {
-    console.log("initActors")
-    console.log(principal)
-
-    if (!principal) return;
-    const daoCanisterId = process.env.DAO_CANISTER_ID
-    const daoActor = await window.ic.plug.createActor({
-      canisterId: daoCanisterId,
-      interfaceFactory: daoFactory,
-    });
-    setDaoCanister(daoActor)
-    console.log(daoActor)
-    const res = await daoActor.is_registered();
-    console.log(`registered: ${res}`)
-    if (res) {
-      setIsRegistered(true)
-    } else {
-      setIsRegistered(false)
-    }
+  const connect = () => {
+    verifyConnection()
   }
 
+  const disconnect = async () => {
+    //clean all state
+    setPrincipal(null)
+    setProposals([])
+    setDaoCanister(null)
+    setIsRegistered(null)
+    setAwaitingConfirm(false)
+    window.ic.plug.sessionManager.disconnect()
+
+  }
 
 
   const verifyConnection = async () => {
     const connected = await window.ic.plug.isConnected();
 
     if (connected) {
-      window.ic.plug.sessionManager.disconnect()
+      disconnect()
     };
 
     // Whitelist
@@ -79,10 +73,8 @@ function App() {
 
     // Callback to print sessionData
     const onConnectionUpdate = async () => {
-      console.log(window.ic.plug.sessionManager.sessionData)
-      let principal = await window.ic.plug.getPrincipal()
-      setPrincipal(principal)
-
+      console.log("onConnectionUpdate")
+      disconnect()
     }
     // Make the request
     try {
@@ -101,9 +93,31 @@ function App() {
     setPrincipal(principal)
   };
 
+  const initActors = async () => {
+    console.log("Init Actors")
+    console.log(principal)
+
+    if (!principal) return;
+    const daoCanisterId = process.env.DAO_CANISTER_ID
+    const daoActor = await window.ic.plug.createActor({
+      canisterId: daoCanisterId,
+      interfaceFactory: daoFactory,
+    });
+    setDaoCanister(daoActor)
+    console.log(daoActor)
+    const res = await daoActor.is_registered();
+    console.log(`Registered: ${res}`)
+    if (res) {
+      setIsRegistered(true)
+    } else {
+      setIsRegistered(false)
+    }
+  }
+
   const tryRegister = async () => {
     let res = await daoCanister.register(Principal.fromText(canisterInputField.current.value))
     console.log(res) //TODO add errors in UI?
+    setAwaitingConfirm(true)
   }
 
   const submitProposal = async () => {
@@ -121,10 +135,7 @@ function App() {
 
     console.log(propVariant)
 
-    // setProposalTitle("")
-    // setProposalDescription("")
-    // setProposalChange("")
-    let res = await daoCanister.submit_proposal(proposalDescription.current.value, proposalBody.current.value, propVariant)
+    let res = await daoCanister.submit_proposal(proposalTitle.current.value, proposalDescription.current.value, propVariant)
     if (res.ok) {
       console.log("res.ok")
       console.log(res.ok)
@@ -142,37 +153,30 @@ function App() {
       const newList = proposals.map(proposal => {
         if (proposal.id === id) {
           if (vote == "approve")
-            return { ...item, approved: null };
+            return { ...proposal, approved: null };
           else if (vote == "reject")
-            return { ...item, rejected: null };
+            return { ...proposal, rejected: null };
         } else {
-          return item;
+          return proposal;
         }
       });
     }
   }
 
-
-  useEffect(() => {
-    initActors()
-  }, [principal]);
-
-  useEffect(() => {
-    const init = async () => {
-      let params = await DAO.get_dao_parameters()
-      setDaoName(params.name)
-      setDaoLogo(params.logo)
-    }
-    init()
-  }, []);
+  // Handle change event on select tag
+  const handleChange = (event) => {
+    //console.log(event.target.value)
+    setProposalType(event.target.value);
+  }
 
   const fetchProposals = async () => {
-    console.log("loop")
+    console.log("Fetching")
     if (daoCanister == null) return;
     if (isRegistered) {
       //update proposals
+      setAwaitingConfirm(false)
       let proposals = await daoCanister.get_all_proposals_with_vote();
-      setProposals(proposals)
+      setProposals(proposals.reverse())
       let vp = await daoCanister.get_current_vp();
       setVp(vp)
     }
@@ -188,36 +192,25 @@ function App() {
   }
 
   useEffect(() => {
+    initActors()
+  }, [principal]);
+
+  useEffect(() => {
     const init = async () => {
       fetchProposals()
+      let params = await DAO.get_dao_parameters()
+      setDaoName(params.name)
+      setDaoLogo(params.logo)
     }
     init()
     const intervalId = setInterval(async () => {
       fetchProposals()
+      let params = await DAO.get_dao_parameters()
+      setDaoName(params.name)
+      setDaoLogo(params.logo)
     }, 10000);
     return () => clearInterval(intervalId);
   }, [isRegistered]);
-
-
-  const connect = () => {
-    verifyConnection()
-  }
-
-  const disconnect = async () => {
-    //clean all state
-    setPrincipal(null)
-    setProposals(null)
-    setDaoCanister(null)
-    setIsRegistered(false)
-    window.ic.plug.sessionManager.disconnect()
-
-  }
-
-  // Handle change event on select tag
-  const handleChange = (event) => {
-    //console.log(event.target.value)
-    setProposalType(event.target.value);
-  }
 
   return (
     <>
@@ -246,16 +239,16 @@ function App() {
         {isRegistered && <>
           <div className='flex-col flex justify-center items-center self-center'>
             <p>Create Proposal</p>
-            <input ref={proposalDescription} className='max-w-md m-1'></input>
-            <input ref={proposalBody} className='max-w-5xl m-1 h-16'></input>
-            {proposalType === "change_name" ? <input className="text-black w-5/12 h-44" type="text"
+            <input ref={proposalTitle} maxLength="20" type="text" className='max-w-md m-1'></input>
+            <input ref={proposalDescription} maxLength="50" type="text" className='max-w-5xl m-1 h-16'></input>
+            {proposalType === "change_name" ? <input className="text-black w-5/12 h-44" maxLength="20" type="text"
               placeholder="New name"
               value={proposalChange}
               onChange={(e) => setProposalChange(e.target.value)}>
 
             </input>
               : null}
-            {proposalType === "change_logo" ? <input className="text-black w-5/12 h-44" type="text"
+            {proposalType === "change_logo" ? <input className="text-black w-5/12 h-44" maxLength="100" type="text"
               placeholder="Logo URL"
               value={proposalChange}
               onChange={(e) => setProposalChange(e.target.value)}>
@@ -285,6 +278,7 @@ function App() {
             <p>Insert your canister NFT id to register:</p>
             <input ref={canisterInputField}></input>
             <button onClick={tryRegister}>submit</button>
+            {awaitingConfirm && <p>Awaiting Confirmation...</p>}
           </div>
         }
       </>

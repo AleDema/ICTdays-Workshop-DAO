@@ -15,6 +15,12 @@ npm start # Start the development server
 
 When ready, run `dfx deploy` to build and deploy your application.
 
+- dfx build --network ic DAO
+- dfx build --network ic frontend
+- dfx canister --network ic install DAO
+- dfx canister --network ic install frontend
+- dfx canister --network ic install --mode upgrade
+
 ## Technology Stack
 
 - [Vite](https://vitejs.dev/): high-performance tooling for front-end web development

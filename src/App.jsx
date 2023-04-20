@@ -215,17 +215,14 @@ function App() {
   return (
     <>
       <div className="p-8 flex justify-between items-center w-full max-w-5xl mx-auto">
-        <p className='text-white font-bold'>UniTN DAO</p>
-
         {<p className='text-white font-bold'>{daoName}</p>}
+        {daoLogo !== "" && <img src={daoLogo} className="logo" alt="dao logo" />}
 
         <div>
           {principal && <button onClick={disconnect}>Disconnect</button>}
           {!principal && <button onClick={connect}>Connect</button>}
         </div>
-        
-        
-        {daoLogo !== "" && <img src={daoLogo} className="logo" alt="dao logo" />}
+
       </div>
       <div className="flex flex-row justify-center items-center">
         <a
@@ -243,18 +240,18 @@ function App() {
         </a>
       </div>
       {principal && <>
-        { isRegistered && <>
+        {isRegistered && <>
           <div className='flex-col flex justify-center items-center max-w-lg m-1 mx-auto gap-6 w-full'>
             <p className='text-white font-semibold'>Create Proposal</p>
             <div className='flex flex-col gap-2 items-start justify-start w-full'>
               <input type="text" className="px-2 py-1 rounded-lg w-full" ref={proposalTitle} maxLength="20" placeholder="Your proposal title" />
               <p className='text-[12px] font-thin opacity-70'>Insert the title of your proposal</p>
-            </div> 
+            </div>
 
             <div className='flex flex-col gap-2 items-start justify-start w-full'>
               <input type="text" className="px-2 py-1 rounded-lg w-full" ref={proposalDescription} maxLength="50" placeholder="Your proposal content" />
               <p className='text-[12px] font-thin opacity-70'>Insert the content of your proposal</p>
-            </div> 
+            </div>
 
             {
               proposalType === "change_name" && (
@@ -262,7 +259,7 @@ function App() {
                   <input type="text" className="px-2 py-1 rounded-lg w-full" maxLength="20" placeholder="New DAO name" value={proposalChange}
                     onChange={(e) => setProposalChange(e.target.value)} />
                   <p className='text-[12px] font-thin opacity-70'>Insert the new name of the DAO</p>
-                </div>              
+                </div>
               )
             }
 
@@ -273,7 +270,7 @@ function App() {
                     onChange={(e) => setProposalChange(e.target.value)} />
                   <p className='text-[12px] font-thin opacity-70'>Insert the new url of the logo</p>
                 </div>
-              ) 
+              )
             }
             <select className="w-full px-2 py-1 rounded-lg" onChange={handleChange}>
               {options.map((option) => (
@@ -298,8 +295,8 @@ function App() {
             <div className='flex flex-col gap-2 items-start justify-start'>
               <input type="text" className="px-2 py-1 rounded-lg w-full" ref={canisterInputField} placeholder="Your canisert id" />
               <p className='text-[12px] font-thin opacity-70'>Insert the ID of your NFT canister</p>
-            </div>  
-            
+            </div>
+
 
             <button onClick={tryRegister} className='bg-[#0C93EA] w-full'>Add to DAO</button>
 

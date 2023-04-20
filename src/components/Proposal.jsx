@@ -28,15 +28,14 @@ function Proposal(props) {
     if (e.change_data.change_name) type = `Change Name to ${e.change_data.change_name}`
     if (e.change_data.change_logo) type = `Change Logo to ${e.change_data.change_logo}`
     return (
-        <div className='flex flex-col m-16 rounded-md border-indigo-800 border p-1 w-80 h-80'>
-
-            <p>Id : {Number(e.id)}</p>
-            <p>Title: {e.title}</p>
-            <p>Description: {e.description}</p>
-            <p>Approves: {Number(e.approve_votes)} / {Number(props.vp)}</p>
-            <p>Rejects: {Number(e.reject_votes)} / {Number(props.vp)}</p>
-            <p>State: {state}</p>
-            <p>Type: {type}</p>
+        <div className='flex flex-col m-16 border-indigo-800 border rounded-lg p-6'>
+            <p className='text-white'>Id : {Number(e.id)}</p>
+            <p className='text-white font-bold'>Title: {e.title}</p>
+            <p className='text-white'>Description: {e.description}</p>
+            <p className='text-white'>Approvals: {Number(e.approve_votes)} / {Number(props.vp)}</p>
+            <p className='text-white'>Rejections: {Number(e.reject_votes)} / {Number(props.vp)}</p>
+            <p className='text-white'>State: {state}</p>
+            <p className='text-white mb-4'>Type: {type}</p>
             {element}
         </div>)
 }

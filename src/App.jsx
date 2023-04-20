@@ -117,9 +117,14 @@ function App() {
   }
 
   const tryRegister = async () => {
+    setMessage("Checking...")
     let res = await daoCanister.register(Principal.fromText(canisterInputField.current.value))
-    console.log(res) //TODO add errors in UI?
-    setMessage("Waiting for confirm")
+    console.log(res)
+    if (res.err !== null) {
+      setMessage(res.err)
+    } else {
+      setMessage("Waiting for confirm")
+    }
   }
 
   const submitProposal = async () => {

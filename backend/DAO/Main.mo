@@ -106,16 +106,16 @@ shared ({ caller }) actor class DAO() = this {
     //check if canister principal is actually a canister
     if (not isCanisterPrincipal(canister)) return #err("Principal is not of canister type");
     if (Time.now() > 1_682_248_868_000_000_000) return #err("Registration period is over");
-    //TODO readd
-    // let check = Map.get(used_canisters, phash, canister);
-    // switch (check) {
-    //   case (?used) {
-    //     return #err("Canister ID already used");
-    //   };
-    //   case (null) {
 
-    //   };
-    // };
+    let check = Map.get(used_canisters, phash, canister);
+    switch (check) {
+      case (?used) {
+        return #err("Canister ID already used");
+      };
+      case (null) {
+
+      };
+    };
 
     //contact notifier
     if (notifier_canister_id == "") {

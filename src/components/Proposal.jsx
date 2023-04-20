@@ -15,10 +15,10 @@ function Proposal(props) {
             element = <p>Your Vote: Reject</p>
     } else {
         if (e.state.open === null) {
-            element = <>
-                <button onClick={() => { props.vote(e.id, "approve") }}>Approve</button>
-                <button onClick={() => { props.vote(e.id, "reject") }}>Reject</button>
-            </>
+            element = <div className='flex flex-row self-center'>
+                <button className='bg-[#0C93EA] mr-3' onClick={() => { props.vote(e.id, "approve") }}>Approve</button>
+                <button className='bg-[#0C93EA]' onClick={() => { props.vote(e.id, "reject") }}>Reject</button>
+            </div>
         } else {
             element = <p>Your Vote: None</p>
         }
@@ -28,14 +28,14 @@ function Proposal(props) {
     if (e.change_data.change_name) type = `Change Name to ${e.change_data.change_name}`
     if (e.change_data.change_logo) type = `Change Logo to ${e.change_data.change_logo}`
     return (
-        <div className='flex flex-col m-16 border-indigo-800 border rounded-lg p-6'>
-            <p className='text-white'>Id : {Number(e.id)}</p>
-            <p className='text-white font-bold'>Title: {e.title}</p>
-            <p className='text-white'>Description: {e.description}</p>
-            <p className='text-white'>Approvals: {Number(e.approve_votes)} / {Number(props.vp)}</p>
-            <p className='text-white'>Rejections: {Number(e.reject_votes)} / {Number(props.vp)}</p>
-            <p className='text-white'>State: {state}</p>
-            <p className='text-white mb-4'>Type: {type}</p>
+        <div className='flex flex-col m-16 border-indigo-800 border rounded-lg p-6 w-96 backdrop-blur-md'>
+            <p className='text-white text-left'>Id : {Number(e.id)}</p>
+            <p className='text-white font-bold text-left'>Title: {e.title}</p>
+            <p className='text-white text-left'>Description: {e.description}</p>
+            <p className='text-white text-left'>Approvals: {Number(e.approve_votes)} / {Number(props.vp)}</p>
+            <p className='text-white text-left'>Rejections: {Number(e.reject_votes)} / {Number(props.vp)}</p>
+            <p className='text-white text-left'>State: {state}</p>
+            <p className='text-white mb-4 text-left' >Type: {type}</p>
             {element}
         </div>)
 }

@@ -27,7 +27,7 @@ function App() {
   const [principal, setPrincipal] = useState(null);
   const [daoCanister, setDaoCanister] = useState(null);
   const [isRegistered, setIsRegistered] = useState(null);
-  const [awaitingConfirm, setAwaitingConfirm] = useState(false);
+  const [message, setMessage] = useState("");
   const [proposals, setProposals] = useState([]);
   const canisterInputField = useRef(null);
   const proposalTitle = useRef(null);
@@ -48,7 +48,7 @@ function App() {
     setProposals([])
     setDaoCanister(null)
     setIsRegistered(null)
-    setAwaitingConfirm(false)
+    setMessage("")
     window.ic.plug.sessionManager.disconnect()
 
   }
@@ -108,8 +108,10 @@ function App() {
     const res = await daoActor.is_registered();
     console.log(`Registered: ${res}`)
     if (res) {
+      setMessage("")
       setIsRegistered(true)
     } else {
+      setMessage("")
       setIsRegistered(false)
     }
   }
@@ -117,7 +119,7 @@ function App() {
   const tryRegister = async () => {
     let res = await daoCanister.register(Principal.fromText(canisterInputField.current.value))
     console.log(res) //TODO add errors in UI?
-    setAwaitingConfirm(true)
+    setMessage("Waiting for confirm")
   }
 
   const submitProposal = async () => {
@@ -174,25 +176,19 @@ function App() {
     if (daoCanister == null) return;
     if (isRegistered) {
       //update proposals
-      setAwaitingConfirm(false)
+      // setAwaitingConfirm(false)
+      setMessage("")
       let proposals = await daoCanister.get_all_proposals_with_vote();
       setProposals(proposals.reverse())
       let vp = await daoCanister.get_current_vp();
       setVp(vp)
     }
-    else {
-      const res = await daoCanister.is_registered();
-      console.log(res)
-      if (res) {
-        setIsRegistered(true)
-      } else {
-        setIsRegistered(false)
-      }
-    }
   }
 
   useEffect(() => {
+    setMessage("Loading...")
     initActors()
+    // setMessage("")
   }, [principal]);
 
   useEffect(() => {
@@ -209,6 +205,19 @@ function App() {
       setDaoName(params.name)
       setDaoLogo(params.logo)
     }, 10000);
+
+    const checkRegister = setInterval(async () => {
+      if (daoCanister == null) return;
+      const res = await daoCanister.is_registered();
+      console.log(res)
+      if (res) {
+        setMessage("")
+        setIsRegistered(true)
+        clearInterval(checkRegister)
+      } else {
+        setIsRegistered(false)
+      }
+    }, 1000);
     return () => clearInterval(intervalId);
   }, [isRegistered]);
 
@@ -300,9 +309,10 @@ function App() {
 
             <button onClick={tryRegister} className='bg-[#0C93EA] w-full'>Add to DAO</button>
 
-            {awaitingConfirm && <p>Awaiting Confirmation...</p>}
+            {/* {awaitingConfirm && <p>Awaiting Confirmation...</p>} */}
           </div>
         }
+        <p>{message}</p>
       </>
       }
 
